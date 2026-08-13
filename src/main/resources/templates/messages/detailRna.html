@@ -1,0 +1,486 @@
+<!doctype html>
+
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+  <style>
+    /*#select-console-selectized{position: unset !important;}#设置select下拉框高度为默认大小，selectize插件会导致select变矮，select-console是select的id*/
+    .form-check-label{white-space: nowrap;}
+    .form-check{margin-bottom: .25rem;}
+    .wordBreak {
+      white-space: nowrap;
+      word-break: keep-all;
+      overflow-wrap: normal;
+    }
+    .text-pull {
+      text-align: justify;
+      hyphens: auto;
+    }
+    #sampleDescript td {
+      padding: 0.25rem 0.75rem;
+    }
+    #control-panel {
+      position: absolute;
+      top: 80px;
+      left: 0;
+      margin: 12px;
+      padding: 20px;
+      z-index: 1;
+    }
+    .table th {
+      text-transform: none !important;
+    }
+    #volcanochart {
+      width: 380px;
+      height: 300px;
+    }
+  </style>
+  <body >
+    <div class="page">
+      <!-- Navbar -->
+      <header th:replace="inc/inc :: header"></header>
+
+      <div class="page-wrapper">
+        <!-- Page body -->
+        <div class="page-body">
+          <div class="container-xl">
+            <div class="card mt-3 mb-3 card-stacked">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-4">
+                    <h3 class="card-title">Dataset information</h3>
+                    <div class="table-responsive">
+                      <table class="table table-borderless table-striped" id="sampleDescript">
+                      </table>
+                    </div>
+                  </div>
+                  <div class="col-md-8">
+                    <h3 class="card-title">Sample table</h3>
+                    <table class="table" id="sampleInfo" style="width: 100%;">
+                      <tbody class="table-tbody">
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <div class="card">
+              <div class="card-body">
+                <div id="rnaDegGroupContainer"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <div id="box" style="width: 500px; height: 500px;"></div>
+          </div>
+        </div>
+        <footer th:replace="inc/inc :: geneDescription"></footer>
+
+
+        <footer th:replace="inc/inc :: footer"></footer>
+      </div>
+    </div>
+    <div th:replace="inc/plugins :: script"></div>
+    <script th:src="@{/js/echarts-5.5.0.min.js}"></script>
+    <script th:src="@{/js/deckUmap.js}"></script>
+    <script th:src="@{/js/detail.js}"></script>
+    <script th:src="@{/js/rnadetail.js}"></script>
+
+
+    <script th:inline="javascript">
+      let id = [[${id}]];
+
+
+      {/*获取样本信息*/
+        getSampleDescript(id);
+        getSampleInfo("sampleInfo",id);
+      }
+
+
+      $.ajax({
+        url: "getRnaDegGroup",
+        type: "GET",
+        dataType: "json",
+        async: true,
+        data: {id: id},
+        success: function(data) {
+          var html = "";
+          $.each(data.data, function(index, item) {
+            var volcanoId = "volcanochart_" + index;
+            var tableId = "rnadegtab_" + index;
+
+            html += `
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h5>${item.group_name}</h5>
+                        <p>
+                            <strong>GSE:</strong> ${item.gse_id} |
+                            <strong>Case:</strong> ${item.case_group} |
+                            <strong>Ctrl:</strong> ${item.ctrl_group} |
+                            <strong>Sample:</strong> ${item.sample_n} |
+                            <strong>Gene:</strong> ${item.gene_n}
+                        </p>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div id="${volcanoId}" style="width:100%;height:420px;"></div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <div class="table-responsive">
+                            <table class="table table-borderless table-striped" id="${tableId}"></table>
+                        </div>
+                    </div>
+                </div>
+            `;
+          });
+
+          $("#rnaDegGroupContainer").html(html);
+
+          $.each(data.data, function(index, item) {
+            var volcanoId = "volcanochart_" + index;
+            var tableId = "rnadegtab_" + index;
+            var degTableName = item.output_file;
+
+            _drawRnaDegVolcano_(volcanoId, degTableName);
+            _getRnaDegTab_(tableId, degTableName);
+          });
+        }
+      });
+
+      function _drawRnaDegVolcano_(containerId, id) {
+        const pvalueCutoff = 0.05;
+        const log2fcCutoff = 0.5;
+
+        const chartDom = document.getElementById(containerId);
+        const myChart = echarts.init(chartDom, null, {renderer: "svg"});
+
+        myChart.showLoading();
+
+        $.ajax({
+          url: "getRnaDegVolcano",
+          type: "GET",
+          dataType: "json",
+          async: true,
+          data: {id: id},
+          success: function(response) {
+            const upData = [];
+            const downData = [];
+            const normalData = [];
+            const yCutoff = -Math.log10(pvalueCutoff);
+
+            response.data.forEach(function(item) {
+              const gene = item.gene;
+              const log2fc = Number(item.log2fc);
+              const pvalue = Number(item.pvalue);
+
+              if (!gene || !Number.isFinite(log2fc) || !Number.isFinite(pvalue) || pvalue <= 0) {
+                return;
+              }
+
+              const negLog10P = -Math.log10(pvalue);
+
+              const point = {
+                name: gene,
+                value: [log2fc, negLog10P, pvalue, gene]
+              };
+
+              if (pvalue < pvalueCutoff && log2fc > log2fcCutoff) {
+                upData.push(point);
+              } else if (pvalue < pvalueCutoff && log2fc < -log2fcCutoff) {
+                downData.push(point);
+              } else {
+                normalData.push(point);
+              }
+            });
+
+            const option = {
+              backgroundColor: "#ffffff",
+              animation: false,
+              tooltip: {
+                trigger: "item",
+                confine: true,
+                formatter: function(params) {
+                  const v = params.value;
+                  return [
+                    "Gene: " + v[3],
+                    "log2FC: " + Number(v[0]).toFixed(4),
+                    "-log10(pvalue): " + Number(v[1]).toFixed(4),
+                    "pvalue: " + v[2]
+                  ].join("<br>");
+                }
+              },
+              legend: {
+                top: 0,
+                left: "center",
+                data: ["Up", "Down", "Not significant"]
+              },
+              grid: {
+                left: 70,
+                right: 50,
+                top: 40,
+                bottom: 50
+              },
+              xAxis: {
+                type: "value",
+                name: "log2FC",
+                nameLocation: "middle",
+                nameGap: 35,
+                scale: true,
+                splitLine: {
+                  lineStyle: {
+                    type: "dashed",
+                    color: "#e0e0e0"
+                  }
+                },
+                axisLine: {
+                  lineStyle: {
+                    color: "#333"
+                  }
+                }
+              },
+              yAxis: {
+                type: "value",
+                name: "-log10(pvalue)",
+                nameLocation: "middle",
+                nameGap: 45,
+                min: 0,
+                scale: true,
+                splitLine: {
+                  lineStyle: {
+                    type: "dashed",
+                    color: "#e0e0e0"
+                  }
+                },
+                axisLine: {
+                  lineStyle: {
+                    color: "#333"
+                  }
+                }
+              },
+              series: [
+                {
+                  name: "Not significant",
+                  type: "scatter",
+                  data: normalData,
+                  symbolSize: 6,
+                  large: true,
+                  largeThreshold: 3000,
+                  itemStyle: {
+                    color: "rgba(180, 180, 180, 0.65)"
+                  },
+                  emphasis: {
+                    focus: "series",
+                    itemStyle: {
+                      color: "#666666"
+                    }
+                  }
+                },
+                {
+                  name: "Up",
+                  type: "scatter",
+                  data: upData,
+                  symbolSize: 7,
+                  large: true,
+                  largeThreshold: 3000,
+                  itemStyle: {
+                    color: "rgba(215, 48, 39, 0.85)"
+                  },
+                  emphasis: {
+                    focus: "series",
+                    itemStyle: {
+                      color: "#b2182b"
+                    }
+                  }
+                },
+                {
+                  name: "Down",
+                  type: "scatter",
+                  data: downData,
+                  symbolSize: 7,
+                  large: true,
+                  largeThreshold: 3000,
+                  itemStyle: {
+                    color: "rgba(69, 117, 180, 0.85)"
+                  },
+                  emphasis: {
+                    focus: "series",
+                    itemStyle: {
+                      color: "#2166ac"
+                    }
+                  }
+                },
+                {
+                  name: "Cutoff",
+                  type: "line",
+                  data: [],
+                  silent: true,
+                  markLine: {
+                    symbol: "none",
+                    animation: false,
+                    lineStyle: {
+                      type: "dashed",
+                      color: "#555",
+                      width: 1
+                    },
+                    label: {
+                      color: "#333",
+                      fontSize: 11
+                    },
+                    data: [
+                      {
+                        yAxis: yCutoff,
+                        label: {
+                          formatter: "p = 0.05"
+                        }
+                      },
+                      {
+                        xAxis: log2fcCutoff,
+                        label: {
+                          formatter: "0.5"
+                        }
+                      },
+                      {
+                        xAxis: -log2fcCutoff,
+                        label: {
+                          formatter: "-0.5"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            };
+
+            myChart.hideLoading();
+            myChart.setOption(option, true);
+
+            window.addEventListener("resize", function() {
+              myChart.resize();
+            });
+          },
+          error: function() {
+            myChart.hideLoading();
+            $("#" + containerId).html("<div class='text-danger'>Volcano plot loading failed.</div>");
+          }
+        });
+      }
+    </script>
+
+    <script>
+
+      const chartDom = document.getElementById("box");
+      const myChart = echarts.init(chartDom, null, {renderer: "svg"});
+
+      myChart.showLoading();
+      const option = {
+        title: [
+          {
+            text: 'Michelson-Morley Experiment',
+            left: 'center'
+          },
+          {
+            text: 'upper: Q3 + 1.5 * IQR \nlower: Q1 - 1.5 * IQR',
+            borderColor: '#999',
+            borderWidth: 1,
+            textStyle: {
+              fontWeight: 'normal',
+              fontSize: 14,
+              lineHeight: 20
+            },
+            left: '10%',
+            top: '90%'
+          }
+        ],
+        dataset: [
+          {
+            // prettier-ignore
+            source: [
+              [850, 740, 900, 1070, 930, 850, 950, 980, 980, 880, 1000, 980, 930, 650, 760, 810, 1000, 1000, 960, 960],
+              [960, 940, 960, 940, 880, 800, 850, 880, 900, 840, 830, 790, 810, 880, 880, 830, 800, 790, 760, 800],
+              [880, 880, 880, 860, 720, 720, 620, 860, 970, 950, 880, 910, 850, 870, 840, 840, 850, 840, 840, 840],
+              [890, 810, 810, 820, 800, 770, 760, 740, 750, 760, 910, 920, 890, 860, 880, 720, 840, 850, 850, 780],
+              [890, 840, 780, 810, 760, 810, 790, 810, 820, 850, 870, 870, 810, 740, 810, 940, 950, 800, 810, 870]
+            ]
+          },
+          {
+            transform: {
+              type: 'boxplot',
+              config: { itemNameFormatter: 'expr {value}' }
+            }
+          },
+          {
+            fromDatasetIndex: 1,
+            fromTransformResult: 1
+          }
+        ],
+        dataZoom: [
+          {
+            type: 'inside',
+            start: 0,
+            end: 20
+          },
+          {
+            show: true,
+            type: 'slider',
+            top: '90%',
+            xAxisIndex: [0],
+            start: 0,
+            end: 20
+          }
+        ],
+        tooltip: {
+          trigger: 'item',
+          axisPointer: {
+            type: 'shadow'
+          }
+        },
+        grid: {
+          left: '10%',
+          right: '10%',
+          bottom: '15%'
+        },
+        xAxis: {
+          type: 'category',
+          boundaryGap: true,
+          nameGap: 30,
+          splitArea: {
+            show: false
+          },
+          splitLine: {
+            show: false
+          }
+        },
+        yAxis: {
+          type: 'value',
+          name: 'km/s minus 299,000',
+          splitArea: {
+            show: true
+          }
+        },
+        series: [
+          {
+            name: 'boxplot',
+            type: 'boxplot',
+            datasetIndex: 1
+          },
+          {
+            name: 'outlier',
+            type: 'scatter',
+            datasetIndex: 2
+          }
+        ]
+      };
+
+      myChart.hideLoading();
+      myChart.setOption(option, true);
+
+      window.addEventListener("resize", function() {
+        myChart.resize();
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,162 @@
+<!doctype html>
+
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+<style>
+    .table th {
+        text-transform: none !important;
+    }
+</style>
+<body >
+
+<div class="page">
+    <!-- Navbar -->
+    <header th:replace="inc/inc :: header"></header>
+
+    <div class="page-wrapper">
+        <!-- Page body -->
+        <div class="page-body">
+            <div class="container-xl">
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h2>Data Download Center</h2>
+                                <p>This page provides comprehensive data download services for the Stroke Single-Cell Database. We have organized standardized analysis results from all datasets in the database, encompassing multi-level data resources from raw expression matrices to advanced analytical products, supporting users with different research needs in obtaining required data.</p>
+                                <h3>Bulk Download by Analysis Type</h3>
+                                <p>
+                                    <a href="metadata.tar.gz" download="metadata.tar.gz">
+                                    <span class="status status-azure">
+                                        <span class="status-dot status-dot-animated"></span>meta.data
+                                    </span>
+                                    </a>
+                                    <a href="umap.tar.gz" download="umap.tar.gz">
+                                    <span class="status status-indigo">
+                                        <span class="status-dot status-dot-animated"></span>Umap plot
+                                    </span>
+                                    </a>
+                                    <a href="monocle.tar.gz" download="monocle.tar.gz">
+                                    <span class="status status-purple">
+                                        <span class="status-dot status-dot-animated"></span>Monocle
+                                    </span>
+                                    </a>
+                                    <a href="deg.tar.gz" download="deg.tar.gz">
+                                    <span class="status status-pink">
+                                        <span class="status-dot status-dot-animated"></span>Differentially expressed genes
+                                    </span>
+                                    </a>
+                                </p>
+                                <h3>Individual Dataset Downloads</h3>
+                                <div class="table-responsive">
+                                    <table class="table" id="sampleTable">
+                                        <thead>
+                                        <tr>
+                                            <th>SampleID</th>
+                                            <th>GSEID</th>
+                                            <th>GSMID</th>
+                                            <th>SampleName</th>
+                                            <th>Species</th>
+                                            <th>Tissue</th>
+                                            <th>Age</th>
+                                            <th>Sex</th>
+                                            <th>Treatment</th>
+                                            <th>Times</th>
+                                            <th>Metadata</th>
+                                            <th>RDS</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody class="table-tbody">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer th:replace="inc/inc :: footer"></footer>
+    </div>
+</div>
+<div th:replace="inc/plugins :: script"></div>
+
+<script th:inline="none">
+    {
+        $('#sampleTable').DataTable({
+            ajax: {
+                url: "getSampleTable",
+                type: "GET",
+                async: true,
+                data: {"tab1Param": '', "tab2Param": '', "tab3Param": '', "tab4Param":'', "tab5Param":''}
+            },
+            bProcessing : true,
+            serverSide: true,
+            searching: true,
+            paging: true,
+            ordering: true,
+            scrollX: true,
+            lengthMenu: [[10, 20, 30, 100], [10, 20, 30, 100]],
+            destroy: true,
+            columns: [
+                {
+                    "data": "sampleId",
+                    "render": function (data, type, row, meta) {
+                        return "<a target='_blank' href='getDetailViewGL?id=" + row.sampleId + "'>" + row.sampleId + "</a>";
+                    }
+                },
+                {
+                    "data": "gseId",
+                    "render": function (data, type, row, meta) {
+                        return "<a target='_blank' href='https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=" + row.gseId + "'>" + row.gseId + "</a>";
+                    }
+                },
+                {
+                    "data": "gsmId",
+                    "render": function (data, type, row, meta) {
+                        return "<a target='_blank' href='https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=" + row.gsmId + "'>" + row.gsmId + "</a>";
+                    }
+                },
+                {"data": "sampleName"},
+                {"data": "species"},
+                {"data": "tissue"},
+                {"data": "age"},
+                {"data": "sex"},
+                {"data": "treatment"},
+                {"data": "times"},
+                {
+                    "data": "sampleId",
+                    "render": function (data, type, row, meta) {
+                        return "<a target='_blank' href='" + row.sampleId + "_metadata.csv'>" + "csv</a>";
+                    }
+                },
+                {
+                    "data": "sampleId",
+                    "render": function (data, type, row, meta) {
+                        return "<a target='_blank' href='" + row.sampleId + ".rds'>" + "rds</a>";
+                    }
+                }
+            ],
+            oLanguage: {
+                "sProcessing": 'processing......',
+                "sLengthMenu": "_MENU_ entries per page",
+                "sZeroRecords": "No matching data found",
+                "sInfo": "Showing _START_ to _END_ of _TOTAL_ entries",
+                "sInfoEmpty": "Showing _START_ to _END_ of _TOTAL_ entries",
+                "sInfoFiltered": "( Filter from _MAX_ records )",
+                "sSearch": "Search: ",
+                "oPaginate": {
+                    "sFirst": "home",
+                    "sPrevious": "‹",
+                    "sNext": "›",
+                    "sLast": "end"
+                }
+            }
+        });
+    }
+
+</script>
+
+
+</body>
+</html>

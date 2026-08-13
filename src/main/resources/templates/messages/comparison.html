@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+  <style>
+    #select-celltype-selectized{position: unset !important;}
+    p{white-space: normal;}
+    .form-check-label{white-space: nowrap;}
+    .form-check{margin-bottom: .25rem;}
+    .table th {
+      text-transform: none !important;
+    }
+    .hr-text{text-transform: none;}
+  </style>
+  <body >
+    <div class="page">
+      <!-- Navbar -->
+      <header th:replace="inc/inc :: header"></header>
+
+      <div class="page-wrapper">
+        <!-- Page body -->
+        <div class="page-body">
+          <div class="container-xl">
+
+            <div class="card card-stacked">
+              <div class="ribbon ribbon-top bg-blue">
+                <svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-device-desktop-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11.5 16h-7.5a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v6.5" /><path d="M7 20h4" /><path d="M9 16v4" /><path d="M18 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M20.2 20.2l1.8 1.8" /></svg>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <h3 class="card-title">Comparative analysis of two samples</h3>
+                    <i>Select sample by clicking on the row.</i>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-6">
+                    <table class="table table-nowrap display compact" id="tab1">
+                      <tbody class="table-tbody">
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="col-md-6">
+                    <table class="table table-nowrap display compact" id="tab2">
+                      <tbody class="table-tbody">
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-12" style="text-align: center">
+                    <button class="btn btn-outline-success" onclick="toComparison()">Submit</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-12" id="prompt">
+              </div>
+            </div>
+
+            <div id="resultDiv"></div>
+
+          </div>
+        </div>
+
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+          <div class="toast fade" id="toast-geneDescription" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="false">
+            <div class="toast-header">
+              <span>
+                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-dna-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 3v1c-.01 3.352 -1.68 6.023 -5.008 8.014c-3.328 1.99 3.336 -2 .008 -.014c-3.328 1.99 -5 4.662 -5.008 8.014v1" /><path d="M17 21.014v-1c-.01 -3.352 -1.68 -6.023 -5.008 -8.014c-3.328 -1.99 3.336 2 .008 .014c-3.328 -1.991 -5 -4.662 -5.008 -8.014v-1" /><path d="M7 4h10" /><path d="M7 20h10" /><path d="M8 8h8" /><path d="M8 16h8" /></svg>
+              </span>
+              <strong class="me-auto" id="geneSymbol"></strong>
+              <small>Gene Summary</small>
+              <button type="button" class="ms-2 btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+              <div class="table-responsive">
+                <p id="geneDescription"></p>
+                <p id="geneSummary" style="text-align: justify;"></p>
+                <p><span>Synonyms:&nbsp;&nbsp;</span><span id="geneSynonyms"></span></p>
+                <p><span>dbXRefs:&nbsp;&nbsp;</span><span id="genedb"></span></p>
+                <p><a href="" id="geneCard" target="_blank">View on GeneCards</a> <a href="" id="geneId" target="_blank" style="float:right;">NCBI</a><span style="float: right">Source:&nbsp;&nbsp;</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <footer th:replace="inc/inc :: footer"></footer>
+      </div>
+    </div>
+    <div th:replace="inc/plugins :: script"></div>
+  </body>
+  <script th:src="@{/js/analysis.js}"></script>
+  <script th:src="@{/js/deckUmap.js}"></script>
+  <script th:src="@{/js/plotly-2.34.0.min.js}"></script>
+<!--  <script src="https://unpkg.com/deck.gl@^9.0.0/dist.min.js"></script>-->
+  <script th:src="@{/js/deckgl9.0.0.dist.min.js}"></script>
+  <script th:src="@{/js/d3.v7.min.js}"></script>
+
+
+<script>
+  const tab1 = getSampleAna("tab1")
+  const tab2 = getSampleAna("tab2")
+
+  const selectedSamples = {'sample1':'', 'sample2':''};  // 使用工厂函数为每个表格创建处理器
+  createTableHandlers(tab1, selectedSamples, 'sample1');
+  createTableHandlers(tab2, selectedSamples, 'sample2');
+
+  const {DeckGL, ScatterplotLayer, TextLayer, DataFilterExtension, FlyToInterpolator} = deck;
+  /*定义deck cluster umap的全局变量*/
+  let umapData = null;
+  let clusterValue = null;
+  let group = null;
+  let umapGL = null;
+  /*创建deck cluster umap功能性函数*/
+  function labelChange() {  /*当name=“label”标签的checked发生变化时，调整umap绘图。复选框选择值的变化*/
+    redraw("noUpdateLabel",umapData,clusterValue,umapGL,group);
+  }
+  function labelShowFun(param) {  /*当name=“label”标签的checked发生变化时，调整umap绘图。鼠标指向时的变化*/
+    clusterValue = param;
+    redraw("noUpdateLabel",umapData,clusterValue,umapGL,group);
+  }
+  function redraw(updateLabel,umapData,clusterValue,umapGL,group){
+    /*
+    * updateLabel:分类标签，值为noUpdateLabel（不发生变化）和updateLabel（更新cluster文本框）
+    * umapData:绘图数据
+    * clusterValue:鼠标指向的cluster的值，当未选时为null。
+    * umapGL:基于DeckGL的umap绘图。
+    * group:下拉菜单当前值，celltype、cluster、origident
+    * */
+    const selectedCheckboxes = document.querySelectorAll('#labelName input[name="label"]:checked');
+    let selectCluster = Array.from(selectedCheckboxes).map(checkbox => checkbox.value); //selectCluster存储的是当前选中的复选框，也就是展示的clusters
+    let categoryText = null;
+    if (group=="celltype"){
+      categoryText = umapData.celltypeText
+    }else if (group=="clusters"){
+      categoryText = umapData.clusterText
+    }else if (group=="origident"){
+      categoryText = umapData.origText
+    }else if (group=="sex"){
+      categoryText = umapData.sexText
+    }else if (group=="age"){
+      categoryText = umapData.ageText
+    }else if (group=="times"){
+      categoryText = umapData.timesText
+    }else if (group=="tissue"){
+      categoryText = umapData.tissueText
+    }else if (group=="treatment"){
+      categoryText = umapData.treatmentText
+    }
+    let categorys = [...new Set(categoryText.map(item => item.category))];
+    const colorMap = colorMapFun(categorys);
+    if (updateLabel!="noUpdateLabel"){  /*根据category生成umap图分类标签*/
+      selectCluster = categorys;
+      let labelNameHtml = "<div class='form-label'>Clusters and Cell Count</div>\n"
+      $.each(categorys, function(index, value) {
+        labelNameHtml = labelNameHtml +
+                "<label class='form-check' onmouseover='labelShowFun(\""+ value +"\")'>\n" +
+                " <input class='form-check-input' type='checkbox' onchange='labelChange()' name='label' value='"+ value +"' style='background-color: rgb("+ colorMap.get(value) +")' checked />\n" +
+                " <span class='form-check-label'>" + value + " <span class='status status-blue'>" + categoryText[index].count + "</span>\n" + "</span>\n" +
+                "</label>\n"
+      });
+      $('#labelName').html(labelNameHtml);
+    }
+    const nodelayer = new ScatterplotLayer({
+      id: 'scatter-plot',
+      data: umapData.data,
+      getRadius: d => {
+        if (group=="celltype") {
+          return  d.celltype == clusterValue ? 1000:1;
+        } else if (group=="clusters") {
+          return  d.clusters == clusterValue ? 1000:1;
+        }else if (group=="origident") {
+          return  d.origident == clusterValue ? 1000:1;
+        }else if (group=="sex") {
+          return  d.sex == clusterValue ? 1000:1;
+        }else if (group=="age") {
+          return  d.age == clusterValue ? 1000:1;
+        }else if (group=="times") {
+          return  d.times == clusterValue ? 1000:1;
+        }else if (group=="tissue") {
+          return  d.tissue == clusterValue ? 1000:1;
+        }else if (group=="treatment") {
+          return  d.treatment == clusterValue ? 1000:1;
+        }
+      },
+      radiusMaxPixels: 100,
+      radiusMinPixels: 1,
+      radiusScale: 20,
+      getPosition: d => [d.x, d.y],
+      getFillColor: d => {
+        if (group=="celltype") {
+          return  colorMap.get(d.celltype) || [192, 192, 192];
+        } else if (group=="clusters") {
+          return  colorMap.get(d.clusters) || [192, 192, 192];
+        }else if (group=="origident") {
+          return  colorMap.get(d.origident) || [192, 192, 192];
+        }else if (group=="sex") {
+          return  colorMap.get(d.sex) || [192, 192, 192];
+        }else if (group=="age") {
+          return  colorMap.get(d.age) || [192, 192, 192];
+        }else if (group=="times") {
+          return  colorMap.get(d.times) || [192, 192, 192];
+        }else if (group=="tissue") {
+          return  colorMap.get(d.tissue) || [192, 192, 192];
+        }else if (group=="treatment") {
+          return  colorMap.get(d.treatment) || [192, 192, 192];
+        }
+      },
+      getFilterCategory: d => {
+        if (group=="celltype") {
+          return d.celltype;
+        } else if (group=="clusters") {
+          return d.clusters;
+        }else if (group=="origident") {
+          return d.origident;
+        }else if (group=="sex") {
+          return d.sex;
+        }else if (group=="age") {
+          return d.age;
+        }else if (group=="times") {
+          return d.times;
+        }else if (group=="tissue") {
+          return d.tissue;
+        }else if (group=="treatment") {
+          return d.treatment;
+        }
+      },
+      updateTriggers: {
+        getRadius: [clusterValue],  /*鼠标悬停时点的大小变化*/
+        getFillColor: [group],  /*当 group 变化时，强制重新执行 getFillColor*/
+        getFilterCategory: [group]
+      },
+      filterCategories: selectCluster,
+      extensions: [new DataFilterExtension({categorySize: 1})],
+    })
+    const textlayer = new TextLayer({
+      data: categoryText,
+      getPosition: d => [d.x, d.y],
+      getText: d => d.category,
+      getColor: [0, 0, 0],
+      getSize: 15
+    })
+    umapGL.setProps({
+      layers: [nodelayer, textlayer]
+    });
+  }
+
+  /*第二个deck cluster umap实现拷贝，变量和函数名后边加2*/
+  let umapData2 = null;
+  let clusterValue2 = null;
+  let group2 = null;
+  let umapGL2 = null;
+  function labelChange2() {  /*当name=“label”标签的checked发生变化时，调整umap绘图。复选框选择值的变化*/
+    redraw2("noUpdateLabel",umapData2,clusterValue2,umapGL2,group2);
+  }
+  function labelShowFun2(param) {  /*当name=“label”标签的checked发生变化时，调整umap绘图。鼠标指向时的变化*/
+    clusterValue2 = param;
+    redraw2("noUpdateLabel",umapData2,clusterValue2,umapGL2,group2);
+  }
+  function redraw2(updateLabel,umapData,clusterValue,umapGL,group){
+    const selectedCheckboxes = document.querySelectorAll('#labelName2 input[name="label"]:checked');
+    let selectCluster = Array.from(selectedCheckboxes).map(checkbox => checkbox.value); //selectCluster存储的是当前选中的复选框，也就是展示的clusters
+    let categoryText = null;
+    if (group=="celltype"){
+      categoryText = umapData.celltypeText
+    }else if (group=="clusters"){
+      categoryText = umapData.clusterText
+    }else if (group=="origident"){
+      categoryText = umapData.origText
+    }else if (group=="sex"){
+      categoryText = umapData.sexText
+    }else if (group=="age"){
+      categoryText = umapData.ageText
+    }else if (group=="times"){
+      categoryText = umapData.timesText
+    }else if (group=="tissue"){
+      categoryText = umapData.tissueText
+    }else if (group=="treatment"){
+      categoryText = umapData.treatmentText
+    }
+    let categorys = [...new Set(categoryText.map(item => item.category))];
+    const colorMap = colorMapFun(categorys);
+    if (updateLabel!="noUpdateLabel"){  /*根据category生成umap图分类标签*/
+      selectCluster = categorys;
+      let labelNameHtml = "<div class='form-label'>Clusters and Cell Count</div>\n"
+      $.each(categorys, function(index, value) {
+        labelNameHtml = labelNameHtml +
+                "<label class='form-check' onmouseover='labelShowFun2(\""+ value +"\")'>\n" +
+                " <input class='form-check-input' type='checkbox' onchange='labelChange2()' name='label' value='"+ value +"' style='background-color: rgb("+ colorMap.get(value) +")' checked />\n" +
+                " <span class='form-check-label'>" + value + " <span class='status status-blue'>" + categoryText[index].count + "</span>\n" + "</span>\n" +
+                "</label>\n"
+      });
+      $('#labelName2').html(labelNameHtml);
+    }
+    const nodelayer = new ScatterplotLayer({
+      id: 'scatter-plot',
+      data: umapData.data,
+      getRadius: d => {
+        if (group=="celltype") {
+          return  d.celltype == clusterValue ? 1000:1;
+        } else if (group=="clusters") {
+          return  d.clusters == clusterValue ? 1000:1;
+        }else if (group=="origident") {
+          return  d.origident == clusterValue ? 1000:1;
+        }else if (group=="sex") {
+          return  d.sex == clusterValue ? 1000:1;
+        }else if (group=="age") {
+          return  d.age == clusterValue ? 1000:1;
+        }else if (group=="times") {
+          return  d.times == clusterValue ? 1000:1;
+        }else if (group=="tissue") {
+          return  d.tissue == clusterValue ? 1000:1;
+        }else if (group=="treatment") {
+          return  d.treatment == clusterValue ? 1000:1;
+        }
+      },
+      radiusMaxPixels: 100,
+      radiusMinPixels: 1,
+      radiusScale: 20,
+      getPosition: d => [d.x, d.y],
+      getFillColor: d => {
+        if (group=="celltype") {
+          return  colorMap.get(d.celltype) || [192, 192, 192];
+        } else if (group=="clusters") {
+          return  colorMap.get(d.clusters) || [192, 192, 192];
+        }else if (group=="origident") {
+          return  colorMap.get(d.origident) || [192, 192, 192];
+        }else if (group=="sex") {
+          return  colorMap.get(d.sex) || [192, 192, 192];
+        }else if (group=="age") {
+          return  colorMap.get(d.age) || [192, 192, 192];
+        }else if (group=="times") {
+          return  colorMap.get(d.times) || [192, 192, 192];
+        }else if (group=="tissue") {
+          return  colorMap.get(d.tissue) || [192, 192, 192];
+        }else if (group=="treatment") {
+          return  colorMap.get(d.treatment) || [192, 192, 192];
+        }
+      },
+      getFilterCategory: d => {
+        if (group=="celltype") {
+          return d.celltype;
+        } else if (group=="clusters") {
+          return d.clusters;
+        }else if (group=="origident") {
+          return d.origident;
+        }else if (group=="sex") {
+          return d.sex;
+        }else if (group=="age") {
+          return d.age;
+        }else if (group=="times") {
+          return d.times;
+        }else if (group=="tissue") {
+          return d.tissue;
+        }else if (group=="treatment") {
+          return d.treatment;
+        }
+      },
+      updateTriggers: {
+        getRadius: [clusterValue],  /*鼠标悬停时点的大小变化*/
+        getFillColor: [group],  /*当 group 变化时，强制重新执行 getFillColor*/
+        getFilterCategory: [group]
+      },
+      filterCategories: selectCluster,
+      extensions: [new DataFilterExtension({categorySize: 1})],
+    })
+    const textlayer = new TextLayer({
+      data: categoryText,
+      getPosition: d => [d.x, d.y],
+      getText: d => d.category,
+      getColor: [0, 0, 0],
+      getSize: 15
+    })
+    umapGL.setProps({
+      layers: [nodelayer, textlayer]
+    });
+  }
+
+  /*
+  * 根据基因名，样本id，获取基因表达信息。
+  * */
+  function getGeneDescription(id,container) {
+    var singleSelect = $('#'+container).selectize();
+    var singleSelectize = singleSelect[0].selectize;
+    var singleValue = singleSelectize.getValue();
+    $.ajax({
+      url: "getGeneDescription",
+      type: "GET",
+      dataType: "json",
+      async: true,
+      data: {id: id, gene: singleValue},
+      success: function(res) {
+        $("#geneDescription").text(res.data.description)
+        $("#geneSummary").text(res.data.summary)
+        $("#geneSynonyms").text(res.data.synonyms)
+        $("#geneSymbol").text(res.data.symbol)
+        $("#genedb").text(res.data.dbxrefs)
+        $('#geneCard').attr('href', "https://www.genecards.org/cgi-bin/carddisp.pl?gene=" + res.data.symbol)
+        $('#geneId').attr('href', "https://www.ncbi.nlm.nih.gov/gene/" + res.data.geneid)
+      }
+    });
+  }
+
+
+  /*
+  * 选中比对样本后执行获取样本功能。
+  * */
+  function toComparison() { //获取当前选中样本，执行两个样本的比对。
+    if (selectedSamples.sample1 == "" || selectedSamples.sample2 == "") {
+      $("#prompt").html('<div class="hr-text text-red">Please select two samples for comparison.</div>')
+      $("#resultDiv").empty()
+    } else {
+      $("#prompt").html('<div class="hr-text text-green">The results of samples <label style="color: red">&nbsp;' + selectedSamples.sample1 + '</label> and <label style="color: red">&nbsp;' + selectedSamples.sample2 + '&nbsp;</label> will be presented below.</div>')
+      let result = '<div class="card card-stacked">\n' +
+              '              <div class="ribbon ribbon-top bg-blue">\n' +
+              '                <svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-device-desktop-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11.5 16h-7.5a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v6.5" /><path d="M7 20h4" /><path d="M9 16v4" /><path d="M18 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M20.2 20.2l1.8 1.8" /></svg>\n' +
+              '              </div>\n' +
+              '              <div class="card-body">\n' +
+              '                <div class="tab-content">\n' +
+              '                  <div class="tab-pane active show" id="tabs-umap">\n' +
+              '                    <div class="row mb-3">\n' +
+              '                      <div class="col-md-6">\n' +
+              '                        <div class="card mb-2">\n' +
+              '                          <div class="card-status-top bg-green"></div>\n' +
+              '                        </div>\n' +
+              '                        <div class="row">\n' +
+              '                          <div class="mb-3 col-md-6">\n' +
+              '                            <label class="form-label">Visualize by Category</label>\n' +
+              '                            <select id="select-group" placeholder="Input placeholder">\n' +
+              '                            </select>\n' +
+              '                          </div>\n' +
+              '                        </div>\n' +
+              '                        <div class="row">\n' +
+              '                          <div class="col-md-12" style="position: relative">\n' +
+              '                            <div id="node" class="card-img" style="width: 100%;height:480px;"></div>\n' +
+              '                            <div class="card-img-overlay" onmouseleave="labelShowFun(\'out\')" style="overflow: auto;top:0;left:0;position: absolute;background-color:rgba(255, 255, 255, 0.5);height:350px;width: 200px;z-index: 1 !important;">\n' +
+              '                              <div id="labelName" style="height: 320px;"></div>\n' +
+              '                            </div>\n' +
+              '                          </div>\n' +
+              '                        </div>\n' +
+              '                      </div>\n' +
+              '                      <div class="col-md-6">\n' +
+              '                        <div class="card mb-2">\n' +
+              '                          <div class="card-status-top bg-blue"></div>\n' +
+              '                        </div>\n' +
+              '                        <div class="row">\n' +
+              '                          <div class="mb-3 col-md-6">\n' +
+              '                            <label class="form-label">Visualize by Category</label>\n' +
+              '                            <select id="select-group2" placeholder="Input placeholder">\n' +
+              '                            </select>\n' +
+              '                          </div>\n' +
+              '                        </div>\n' +
+              '                        <div class="row">\n' +
+              '                          <div class="col-md-12" style="position: relative">\n' +
+              '                            <div id="node2" class="card-img" style="width: 100%;height:480px;"></div>\n' +
+              '                            <div class="card-img-overlay" onmouseleave="labelShowFun2(\'out\')" style="overflow: auto;top:0;left:0;position: absolute;background-color:rgba(255, 255, 255, 0.5);height:350px;width: 200px;z-index: 1 !important;">\n' +
+              '                              <div id="labelName2" style="height: 320px;"></div>\n' +
+              '                            </div>\n' +
+              '                          </div>\n' +
+              '                        </div>\n' +
+              '                      </div>\n' +
+              '                    </div>\n' +
+              '\n' +
+              '                    <div class="row mb-3">\n' +
+              '                      <div class="col-md-6">\n' +
+              '                        <div class="row">\n' +
+              '                          <label class="form-label">Gene Expression Visualization\n' +
+              '                              <span data-bs-toggle="toast" data-bs-target="#toast-geneDescription" id="showGeneDescription">' +
+              '                                <svg data-bs-toggle="tooltip" data-bs-placement="top" title="Click to view the selected gene summary." xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="icon icon-tabler icons-tabler-outline icon-tabler-info-circle"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg>' +
+              '                              </span>' +
+              '                            <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">\n' +
+              '                              <a href="" download="expression_matrix.h5">\n' +
+              '                                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-digit"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M9 12m0 1a1 1 0 0 1 1 -1h1a1 1 0 0 1 1 1v3a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1z" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M15 12v5" /></svg>\n' +
+              '                              </a>\n' +
+              '                            </button>\n' +
+              '                          </label>\n' +
+              '                          <div class="mb-3 col-md-6">\n' +
+              '                            <select id="select-feature" placeholder="Input placeholder"></select>\n' +
+              '                          </div>\n' +
+              '                        </div>\n' +
+              '                        <div id="featurePlotGL" style="width: 100%;height:480px;"></div>\n' +
+              '                      </div>\n' +
+              '                      <div class="col-md-6">\n' +
+              '                        <div class="row">\n' +
+              '                          <label class="form-label">Gene Expression Visualization\n' +
+              '                              <span data-bs-toggle="toast" data-bs-target="#toast-geneDescription" id="showGeneDescription2">' +
+              '                                <svg data-bs-toggle="tooltip" data-bs-placement="top" title="Click to view the selected gene summary." xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="icon icon-tabler icons-tabler-outline icon-tabler-info-circle"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg>' +
+              '                              </span>' +
+              '                            <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">\n' +
+              '                              <a href="" download="expression_matrix.h5">\n' +
+              '                                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-digit"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M9 12m0 1a1 1 0 0 1 1 -1h1a1 1 0 0 1 1 1v3a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1z" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M15 12v5" /></svg>\n' +
+              '                              </a>\n' +
+              '                            </button>\n' +
+              '                          </label>\n' +
+              '                          <div class="mb-3 col-md-6">\n' +
+              '                            <select id="select-feature2" placeholder="Input placeholder"></select>\n' +
+              '                          </div>\n' +
+              '                        </div>\n' +
+              '                        <div id="featurePlotGL2" style="width: 100%;height:480px;"></div>\n' +
+              '                      </div>\n' +
+              '                    </div>\n' +
+              '                  </div>\n' +
+              '                </div>\n' +
+              '              </div>\n' +
+              '            </div>'
+      $("#resultDiv").empty()
+      $("#resultDiv").html(result)
+      umapData = null;
+      clusterValue = null;
+      group = null;
+      umapGL = null;
+      umapGL = new DeckGL({
+        container: document.getElementById('node'),
+        initialViewState: {
+          longitude: -4,
+          latitude: 3,
+          zoom: 3.5,
+          minZoom: 3,
+          maxZoom: 6
+        },
+        controller: true
+      });
+      umapData2 = null;
+      clusterValue2 = null;
+      group2 = null;
+      umapGL2 = new DeckGL({
+        container: document.getElementById('node2'),
+        initialViewState: {
+          longitude: -4,
+          latitude: 3,
+          zoom: 3.5,
+          minZoom: 3,
+          maxZoom: 6
+        },
+        controller: true
+      });
+      const id = selectedSamples.sample1
+      const id2 = selectedSamples.sample2
+      /*----------------------第一个样本的deck cluster umap-----------------------*/
+      const eventHandlerGroup = function(name) {  /*细胞分组下拉列表*/
+        return function() {
+          group = arguments[0];
+          if (umapData == null){
+            $.ajax({
+              url: "getNodeDataGL",
+              type: "GET",
+              dataType: "json",
+              async: true,
+              data: {id: id},
+              success: function(result) {
+                umapData = result;
+                redraw("updateLabel",umapData,clusterValue,umapGL,group);
+              }
+            });
+          }else {
+            redraw("updateLabel",umapData,clusterValue,umapGL,group);
+          }
+        };
+      };
+      const groupData = [{name:"Cell Type",value:"celltype"},{name: "Clusters",value: "clusters"},{name: "Orig.Ident",value: "origident"},{name: "Sex",value: "sex"},{name: "Age",value: "age"},{name: "Time of Stroke",value: "times"},{name: "Tissue",value: "tissue"},{name: "Treatment",value: "treatment"}];
+      const $selectGroup = $('#select-group').selectize({
+        valueField: 'value',
+        labelField: 'name',
+        searchField: 'value',
+        options: groupData,
+        create: false,
+        onChange: eventHandlerGroup('onChange')
+      });
+      const control = $selectGroup[0].selectize;
+      control.setValue(groupData[0].value);
+      /* ---------------第二个样本的deck cluster umap----------------- */
+      const eventHandlerGroup2 = function(name) {  /*细胞分组下拉列表*/
+        return function() {
+          group2 = arguments[0];
+          if (umapData2 == null){
+            $.ajax({
+              url: "getNodeDataGL",
+              type: "GET",
+              dataType: "json",
+              async: true,
+              data: {id: id2},
+              success: function(result) {
+                umapData2 = result;
+                redraw2("updateLabel",umapData2,clusterValue2,umapGL2,group2);
+              }
+            });
+          }else {
+            redraw2("updateLabel",umapData2,clusterValue2,umapGL2,group2);
+          }
+        };
+      };
+      const groupData2 = [{name:"Cell Type",value:"celltype"},{name: "Clusters",value: "clusters"},{name: "Orig.Ident",value: "origident"},{name: "Sex",value: "sex"},{name: "Age",value: "age"},{name: "Time of Stroke",value: "times"},{name: "Tissue",value: "tissue"},{name: "Treatment",value: "treatment"}];
+      const $selectGroup2 = $('#select-group2').selectize({
+        valueField: 'value',
+        labelField: 'name',
+        searchField: 'value',
+        options: groupData2,
+        create: false,
+        onChange: eventHandlerGroup2('onChange')
+      });
+      const control2 = $selectGroup2[0].selectize;
+      control2.setValue(groupData2[0].value);
+      /* -------------------------------- */
+      toGeneExpression2(id,"featurePlotGL","select-feature")
+      toGeneExpression2(id2,"featurePlotGL2","select-feature2")
+
+      $('#showGeneDescription').on('click', function() {
+        getGeneDescription(id,"select-feature")
+        $('#toast-geneDescription').addClass("show");
+      })
+      $('#showGeneDescription2').on('click', function() {
+        getGeneDescription(id2,"select-feature2")
+        $('#toast-geneDescription').addClass("show");
+      })
+      $('[data-bs-toggle="tooltip"]').tooltip();
+    }
+  }
+
+
+  /* 设置默认选中行，让用户知道要点击行才可以提交。 */
+  tab1.on('draw', function() {
+    // 确保有数据行存在
+    if (tab1.rows().count() > 0) {
+      // 触发第一行的点击事件
+      $(tab1.row(0).node()).click();
+    }
+  });
+  tab2.on('draw', function() {
+    // 确保有数据行存在
+    if (tab2.rows().count() > 0) {
+      // 触发第一行的点击事件
+      $(tab2.row(1).node()).click();
+    }
+  });
+  // toComparison();
+
+</script>
+
+</html>

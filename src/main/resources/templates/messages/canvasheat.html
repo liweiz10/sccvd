@@ -1,0 +1,96 @@
+<!doctype html>
+
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+<body style="background-color: #fff;">
+    <div>
+        <div id="tfheatLoading" style="text-align: center;">
+            <div class="spinner-border text-info"></div><br><span>loading...</span>
+        </div>
+        <canvas id="getTFHeat" width="1200" height="400"></canvas>
+    </div>
+<div th:replace="inc/plugins :: script"></div>
+</body>
+<link th:href="@{/css/canvasxpress.org_dist_canvasXpress.css}" rel="stylesheet" />
+<script type='text/javascript' th:src="@{/js/canvasxpress.org_dist_canvasXpress.min.js}"></script>
+<script th:inline="javascript">
+    var samplename = [[${sample}]];
+    /*tf motif heatplot*/
+    function TFHeatPlot(samplename) {
+        /*<![CDATA[*/
+        var ctx = /*[[${#httpServletRequest.contextPath}]]*/ '';
+        /*]]>*/
+        var jsonPath = ctx + '/' + samplename + '_TF1000_canvasxpress.json';
+        // var jsonPath = "/" + samplename + "_TF1000_canvasxpress.json"
+        // 显示 loading（请确保页面存在 #tfheatLoading）
+        $("#tfheatLoading").show();
+
+        $.ajax({
+            url: jsonPath,
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            success: function (res) {
+                $("#tfheatLoading").hide();
+                // 简单校验返回格式
+                if (!res || !Array.isArray(res.data) || !Array.isArray(res.tf) || !Array.isArray(res.cell)) {
+                    alert("The returned JSON format is incorrect, please check the file content.");
+                    console.error("Invalid JSON:", res);
+                    return;
+                }
+                var data = {
+                    "y": {
+                        "data": res.data,
+                        "smps": res.tf,
+                        "vars": res.cell
+                    },
+                    "z": {
+                        "GeneClass": res.celltype // 若没有 celltype 列可为 undefined 或 null
+                    }
+                };
+                var config = {
+                    "graphType": "Heatmap",
+                    "heatmapIndicatorPosition": "right",
+                    "overlayFontStyle": "bold",
+                    "overlayScaleFontFactor": "2",
+                    "samplesClustered": "false",
+                    "showLevelOverlays": "false",
+                    "showSmpOverlaysLegend": "false",
+                    "showVarOverlaysLegend": "false",
+                    "smpDendrogramPosition": "right",
+                    "smpTitleLabelPosition": "right",
+                    "varOverlayProperties": {
+                        "GeneClass": {
+                            "position": "top",
+                            "scheme": "GGPlot",
+                            "showLegend": "true",
+                            "thickness": 20,
+                            "type": "Default"
+                        }
+                    },
+                    "varOverlays": ["GeneClass"],
+                    "varTitleLabelPosition": "bottom"
+                };
+                // 清空容器（可选）以防重复渲染
+                var container = document.getElementById("getTFHeat");
+                if (container) container.innerHTML = "";
+
+                // 创建 CanvasXpress 实例（容器 id 必须存在）
+                try {
+                    new CanvasXpress("getTFHeat", data, config);
+                } catch (e) {
+                    console.error("CanvasXpress error：", e);
+                    alert("Hotmap rendering failed, please check the console error.");
+                }
+            },
+            error: function (xhr, status, err) {
+                $("#tfheatLoading").hide();
+                console.error("loadding JSON error：", status, err);
+                alert("Failed to load heatmap data: " + status);
+            }
+        });
+    }
+    TFHeatPlot(samplename);
+</script>
+
+</html>

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+  <style>
+    #select-celltype-selectized{position: unset !important;}
+  </style>
+  <body >
+    <div class="page">
+      <!-- Navbar -->
+      <header th:replace="inc/inc :: header"></header>
+
+      <div class="page-wrapper">
+        <!-- Page body -->
+        <div class="page-body">
+          <div class="container-xl">
+            <div class="row">
+              <div class="col-md-12">
+                <div class="card card-stacked">
+                  <div class="ribbon ribbon-top bg-blue">
+                    <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-device-desktop-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11.5 16h-7.5a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v6.5" /><path d="M7 20h4" /><path d="M9 16v4" /><path d="M18 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M20.2 20.2l1.8 1.8" /></svg>
+                  </div>
+                  <div class="card-body">
+                    <h3 class="card-title">Search</h3>
+                    <div class="accordion accordion-inverted" id="accordion-inverted">
+                      <div class="accordion-item">
+                        <div class="accordion-header">
+                          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-1-inverted" aria-expanded="true">
+                            Search for sample information by cell type.
+                            <div class="accordion-button-toggle">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
+                                <path d="M6 9l6 6l6 -6"></path>
+                              </svg>
+                            </div>
+                          </button>
+                        </div>
+                        <div id="collapse-1-inverted" class="accordion-collapse collapse show" data-bs-parent="#accordion-inverted">
+                          <div class="accordion-body">
+                            <div class="col-md-6">
+                              <div class="mb-3">
+                                <label class="form-label">Cell Type
+                                  <span class="form-help" data-bs-trigger="hover" data-bs-toggle="popover" title="Tooltip" data-bs-content="By selecting a specific cell type, retrieve all sample information containing that cell type from the database.">?</span>
+                                </label>
+                                <select class="form-select" id="select-celltype" placeholder="Input placeholder"></select>
+                              </div>
+                              <div class="mb-3">
+<!--                                <button class="btn btn-info">Info</button>-->
+                                <button onclick="submitFun('celltype')" class="btn btn-success">Search</button>
+<!--                                <button class="btn btn-danger">Danger</button>-->
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="accordion-item">
+                        <div class="accordion-header">
+                          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-2-inverted" aria-expanded="false">
+                            Search for sample information by tissue type.
+                            <div class="accordion-button-toggle">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
+                                <path d="M6 9l6 6l6 -6"></path>
+                              </svg>
+                            </div>
+                          </button>
+                        </div>
+                        <div id="collapse-2-inverted" class="accordion-collapse collapse" data-bs-parent="#accordion-inverted">
+                          <div class="accordion-body">
+                            <div class="col-md-6">
+                              <div class="mb-3">
+                                <label class="form-label">Tissue Type
+                                  <span class="form-help" data-bs-trigger="hover" data-bs-toggle="popover" title="Tooltip" data-bs-content="By selecting a specific tissue type, retrieve all sample information containing that tissue type from the database.">?</span>
+                                </label>
+                                <select class="form-select" id="select-tissuetype" placeholder="Input placeholder"></select>
+                              </div>
+                              <div class="mb-3">
+<!--                                <button class="btn btn-info">Info</button>-->
+                                <button onclick="submitFun('tissuetype')" class="btn btn-success">Search</button>
+<!--                                <button class="btn btn-danger">Danger</button>-->
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="accordion-item">
+                        <div class="accordion-header">
+                          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-3-inverted" aria-expanded="false">
+                            Search for sample information by disease status.
+                            <div class="accordion-button-toggle">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
+                                <path d="M6 9l6 6l6 -6"></path>
+                              </svg>
+                            </div>
+                          </button>
+                        </div>
+                        <div id="collapse-3-inverted" class="accordion-collapse collapse" data-bs-parent="#accordion-inverted" style="">
+                          <div class="accordion-body">
+                            <div class="col-md-6">
+                              <div class="mb-3">
+                                <label class="form-label">Disease Status
+                                  <span class="form-help" data-bs-trigger="hover" data-bs-toggle="popover" title="Tooltip" data-bs-content="By selecting a specific disease status, retrieve all sample information containing that disease status from the database.">?</span>
+                                </label>
+                                <select class="form-select" id="select-disease" placeholder="Input placeholder"></select>
+                              </div>
+                              <div class="mb-3">
+<!--                                <button class="btn btn-info">Info</button>-->
+                                <button onclick="submitFun('disease')" class="btn btn-success">Search</button>
+<!--                                <button class="btn btn-danger">Danger</button>-->
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!--<div class="accordion-item">
+                        <div class="accordion-header">
+                          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-4-inverted" aria-expanded="false">
+                            How accessible are Tabler components?
+                            <div class="accordion-button-toggle">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
+                                <path d="M6 9l6 6l6 -6"></path>
+                              </svg>
+                            </div>
+                          </button>
+                        </div>
+                        <div id="collapse-4-inverted" class="accordion-collapse collapse" data-bs-parent="#accordion-inverted" style="">
+                          <div class="accordion-body">
+                            Tabler components follow WAI-ARIA standards and support keyboard navigation, screen readers, and accessibility best practices.
+                          </div>
+                        </div>
+                      </div>-->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer th:replace="inc/inc :: footer"></footer>
+      </div>
+    </div>
+    <div th:replace="inc/plugins :: script"></div>
+    <script th:src="@{/js/search.js}"></script>
+  </body>
+<script>
+  getCelltype();
+  getTissuetype();
+  getDisease();
+  function submitFun(type) {
+    if (type=="celltype"){
+      const param = $("#select-celltype option:selected").val();
+      window.location.href = "searchResult?type=celltype&param=" + param;
+    }else if (type=="tissuetype"){
+      const param = $("#select-tissuetype option:selected").val();
+      window.location.href = "searchResult?type=tissuetype&param=" + param;
+    }else if (type=="disease"){
+      const param = $("#select-disease option:selected").val();
+      window.location.href = "searchResult?type=disease&param=" + param;
+    }
+  }
+</script>
+</html>

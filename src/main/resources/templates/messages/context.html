@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gene Expression Visualization</title>
+    <script src="https://unpkg.com/deck.gl@^9.0.0/dist.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            height: calc(100vh - 40px);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .control-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 320px;
+            flex-shrink: 0;
+            overflow-y: auto;
+            max-height: 100%;
+        }
+
+        .visualization-container {
+            position: relative;
+            flex: 1;
+            min-height: 500px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            font-size: 12px;
+        }
+
+        .split-view-label {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            border: 1px solid #e0e0e0;
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            white-space: nowrap;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+            font-size: 14px;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #fff;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: normal;
+            cursor: pointer;
+            margin-bottom: 0;
+            font-size: 13px;
+        }
+
+        .gene-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .gene-input-group input {
+            flex: 1;
+        }
+
+        .gene-input-group button {
+            padding: 10px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .gene-input-group button:hover {
+            background: #0056b3;
+        }
+
+        .loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 8px;
+            z-index: 1001;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-weight: 500;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .control-panel {
+                width: 100%;
+                max-height: 300px;
+            }
+
+            .visualization-container {
+                min-height: 600px;
+            }
+        }
+
+        /* 滚动条样式 */
+        .control-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .control-panel::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .control-panel::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .control-panel::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* 控制面板标题 */
+        .panel-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        /* 分割线 */
+        .divider {
+            height: 1px;
+            background: #f0f0f0;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- 左侧控制面板 -->
+    <div class="control-panel">
+        <div class="panel-title">Gene Expression Controls</div>
+
+        <div class="control-group">
+            <label for="datasetId">Dataset ID</label>
+            <input type="text" id="datasetId" value="Stroke_001" placeholder="Enter dataset ID">
+        </div>
+
+        <div class="control-group">
+            <label for="geneName">Gene Name</label>
+            <div class="gene-input-group">
+                <input type="text" id="geneName" value="Cd3d" placeholder="Enter gene name">
+                <button onclick="loadGeneExpression()">Load</button>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="control-group">
+            <label for="groupSelect">Group By</label>
+            <select id="groupSelect">
+                <option value="origident">Orig.ident</option>
+                <option value="sex">Sex</option>
+                <option value="age">Age</option>
+                <option value="times">Time</option>
+                <option value="tissue">Tissue</option>
+                <option value="treatment">Treatment</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>View Mode</label>
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="viewMode" value="combined" checked>
+                    Combined
+                </label>
+                <label>
+                    <input type="radio" name="viewMode" value="split">
+                    Split
+                </label>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="control-group">
+            <label>Quick Actions</label>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button onclick="quickLoadGene('Cd3d')" style="padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Cd3d</button>
+                <button onclick="quickLoadGene('Cd79a')" style="padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Cd79a</button>
+                <button onclick="quickLoadGene('Gfap')" style="padding: 8px 12px; background: #ffc107; color: #333; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Gfap</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧可视化区域 -->
+    <div class="visualization-container" id="visualization-container">
+        <div id="map"></div>
+        <div class="info-panel" id="infoPanel">
+            <div id="statsInfo">Select a gene to visualize expression</div>
+        </div>
+        <div class="loading" id="loadingIndicator">Loading data...</div>
+    </div>
+</div>
+
+<script>
+    // 全局变量
+    let featureDeckgl = null;
+    let cellData = null; // 合并的位置和元数据
+    let currentGeneData = null;
+    let currentGeneName = '';
+    let currentGroupType = 'origident';
+    let currentViewMode = 'combined';
+
+    // 固定配色方案
+    const colorArray = [];
+    colorArray.push([237, 248, 251], [102, 194, 164], [0, 109, 44]);
+
+    // 分组配置
+    const GROUP_TYPES = {
+        'origident': 'Orig.ident',
+        'sex': 'Sex',
+        'age': 'Age',
+        'times': 'Time',
+        'tissue': 'Tissue',
+        'treatment': 'Treatment'
+    };
+
+    // 显示加载指示器
+    function showLoading() {
+        document.getElementById('loadingIndicator').style.display = 'block';
+    }
+
+    // 隐藏加载指示器
+    function hideLoading() {
+        document.getElementById('loadingIndicator').style.display = 'none';
+    }
+
+    // 快速加载基因
+    function quickLoadGene(geneName) {
+        document.getElementById('geneName').value = geneName;
+        loadGeneExpression();
+    }
+
+    // 初始化DeckGL
+    function initializeDeckGL() {
+        const container = document.getElementById('map');
+
+        featureDeckgl = new deck.DeckGL({
+            container: 'map',
+            initialViewState: {
+                longitude: 0,
+                latitude: 0,
+                zoom: 3.5,
+                minZoom: 1,
+                maxZoom: 10
+            },
+            controller: true,
+            getTooltip: getTooltipContent,
+            width: '100%',
+            height: '100%',
+            onLoad: () => {
+                console.log('DeckGL loaded successfully');
+            }
+        });
+    }
+
+    // 工具提示内容
+    function getTooltipContent({ object }) {
+        if (!object) return null;
+
+        return {
+            html: `<div style="padding: 8px; min-width: 250px;">
+                        <div><strong>Gene:</strong> ${currentGeneName}</div>
+                        <div><strong>Expression:</strong> ${object.expressionValue?.toFixed(4) || 'N/A'}</div>
+                        <div><strong>Sample:</strong> ${object.origident || 'N/A'}</div>
+                        <div><strong>Cell type:</strong> ${object.celltype || 'N/A'}</div>
+                        <div><strong>${GROUP_TYPES[currentGroupType]}:</strong> ${object[currentGroupType] || 'N/A'}</div>
+                        <div><strong>UMAP1:</strong> ${object.x?.toFixed(4) || 'N/A'}</div>
+                        <div><strong>UMAP2:</strong> ${object.y?.toFixed(4) || 'N/A'}</div>
+                       </div>`,
+            style: {
+                backgroundColor: 'white',
+                color: '#333',
+                fontSize: '12px',
+                borderRadius: '4px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+            }
+        };
+    }
+
+    // 获取合并的细胞数据（位置+元数据）
+    async function generateCellData2(id) {
+        console.log('Fetching combined cell data for:', id);
+
+        // 模拟合并的数据 - 在实际应用中替换为真实API
+        const mockCellData = [];
+        const numPoints = 2000;
+
+        const groups = ['Control_1', 'Control_2', 'Treatment_1', 'Treatment_2'];
+        const cellTypes = ['T-cell', 'B-cell', 'Macrophage', 'Neuron', 'Astrocyte'];
+        const tissues = ['Brain', 'Blood', 'Spleen'];
+        const sexes = ['Male', 'Female'];
+        const times = ['1h', '6h', '24h', '48h'];
+
+        // 创建几个簇群
+        const clusters = [
+            { centerX: -5, centerY: -5, spread: 2, group: 'Control_1', cellType: 'T-cell' },
+            { centerX: 5, centerY: 5, spread: 2, group: 'Treatment_1', cellType: 'B-cell' },
+            { centerX: -3, centerY: 3, spread: 1.5, group: 'Control_2', cellType: 'Macrophage' },
+            { centerX: 3, centerY: -3, spread: 1.5, group: 'Treatment_2', cellType: 'Neuron' }
+        ];
+
+        clusters.forEach((cluster, clusterIndex) => {
+            const pointsPerCluster = Math.floor(numPoints / clusters.length);
+            for (let i = 0; i < pointsPerCluster; i++) {
+                const umap_x = cluster.centerX + (Math.random() - 0.5) * cluster.spread * 2;
+                const umap_y = cluster.centerY + (Math.random() - 0.5) * cluster.spread * 2;
+
+                mockCellData.push({
+                    umap_x: umap_x,
+                    umap_y: umap_y,
+                    origident: cluster.group,
+                    celltype: cluster.cellType,
+                    sex: sexes[Math.floor(Math.random() * sexes.length)],
+                    age: Math.floor(Math.random() * 30) + 20,
+                    times: times[Math.floor(Math.random() * times.length)],
+                    tissue: tissues[Math.floor(Math.random() * tissues.length)],
+                    treatment: cluster.group.includes('Treatment') ? 'Treatment' : 'Control'
+                });
+            }
+        });
+        console.log(mockCellData)
+        return mockCellData;
+    }
+
+    async function generateCellData(id) {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: "getNodeDataGLsplit",
+                type: "GET",
+                dataType: "json",
+                data: {id: id},
+                success: function(result) {
+                    resolve(result.data);
+                },
+                error: function(xhr, status, error) {
+                    console.error('failed load data:', error);
+                    reject(error);
+                }
+            });
+        });
+    }
+    async function generateValueData(id, geneName) {
+        try {
+            const response = await $.ajax({
+                url: "getGeneExpressionValue",
+                type: "GET",
+                dataType: "json",
+                data: {"id": id, "geneName": geneName}
+            });
+            return {
+                data: response.data,
+                max: response.max
+            };
+        } catch (error) {
+            console.error('Error fetching value data:', error);
+            throw error;
+        }
+    }
+    async function generateValueData2(id, geneName) {
+        console.log('Fetching expression data for gene:', geneName, 'in dataset:', id);
+
+        if (!cellData) {
+            throw new Error('Cell data not loaded');
+        }
+
+        // 生成基因表达数据
+        const mockValueData = new Array(cellData.length);
+        let maxValue = 0;
+
+        for (let i = 0; i < cellData.length; i++) {
+            let value;
+            const cellType = cellData[i].celltype;
+
+            // 模拟基因在不同细胞类型中的特异性表达
+            if (geneName === 'Cd3d') {
+                // Cd3d在T细胞中高表达
+                value = cellType === 'T-cell' ?
+                    Math.random() * 8 + 2 : // T细胞中高表达
+                    Math.random() * 3;      // 其他细胞中低表达
+            } else if (geneName === 'Cd79a') {
+                // CD79A在B细胞中高表达
+                value = cellType === 'B-cell' ?
+                    Math.random() * 8 + 2 : // B细胞中高表达
+                    Math.random() * 3;      // 其他细胞中低表达
+            } else if (geneName === 'Gfap') {
+                // GFAP在星形胶质细胞中高表达
+                value = cellType === 'Astrocyte' ?
+                    Math.random() * 8 + 2 : // 星形胶质细胞中高表达
+                    Math.random() * 3;      // 其他细胞中低表达
+            } else {
+                // 其他基因随机表达
+                value = Math.random() * 5;
+            }
+
+            mockValueData[i] = value;
+            if (value > maxValue) maxValue = value;
+        }
+        console.log(mockValueData)
+        return {
+            data: mockValueData,
+            max: maxValue
+        };
+    }
+
+    // 生成颜色映射域
+    function generateArray(maxValue) {
+        return [0, maxValue / 2, maxValue];
+    }
+
+    // 创建合并视图
+    function createCombinedView() {
+        if (!cellData || !currentGeneData) return;
+
+        const domainArray = generateArray(currentGeneData.max);
+        const colorScale = d3.scaleLinear()
+            .domain(domainArray)
+            .range(colorArray);
+
+        // 创建绘图数据
+        const plotData = cellData.map((cell, index) => ({
+            ...cell,
+            expressionValue: currentGeneData.data[index],
+            position: [cell.x, cell.y, 0]
+        }));
+
+        const featureLayer = new deck.ScatterplotLayer({
+            id: 'scatter-plot-combined',
+            data: plotData,
+            radiusMaxPixels: 4,
+            radiusMinPixels: 1,
+            radiusScale: 1,
+            getPosition: d => d.position,
+            getFillColor: d => colorScale(d.expressionValue),
+            getRadius: 2,
+            pickable: true,
+            autoHighlight: true,
+            updateTriggers: {
+                getFillColor: [currentGeneName]
+            }
+        });
+
+        featureDeckgl.setProps({
+            layers: [featureLayer]
+        });
+
+        console.log('Combined view created with', plotData.length, 'points');
+    }
+
+    // 创建分割视图
+    function createSplitView() {
+        if (!cellData || !currentGeneData) return;
+
+        const domainArray = generateArray(currentGeneData.max);
+        const colorScale = d3.scaleLinear()
+            .domain(domainArray)
+            .range(colorArray);
+
+        // 获取当前分组的所有组别
+        const groups = [...new Set(cellData.map(d => d[currentGroupType]))].sort();
+
+        const layers = [];
+        const spacing = 30;
+        const scale = 0.8;
+
+        // 计算网格布局
+        const cols = Math.ceil(Math.sqrt(groups.length));
+        const rows = Math.ceil(groups.length / cols);
+
+        groups.forEach((group, index) => {
+            // 获取该组对应的数据
+            const groupData = cellData
+                .filter(cell => cell[currentGroupType] === group)
+                .map((cell, originalIndex) => {
+                    // 找到原始索引以获取对应的基因表达值
+                    const expressionIndex = cellData.indexOf(cell);
+                    return {
+                        ...cell,
+                        expressionValue: currentGeneData.data[expressionIndex],
+                        position: [cell.x, cell.y, 0]
+                    };
+                });
+
+            if (groupData.length === 0) return;
+
+            // 计算当前组在网格中的位置
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            const offsetX = (col - (cols - 1) / 2) * spacing;
+            const offsetY = ((rows - 1) / 2 - row) * spacing;
+
+            // 应用偏移量
+            groupData.forEach(d => {
+                d.position[0] = d.position[0] * scale + offsetX;
+                d.position[1] = d.position[1] * scale + offsetY;
+            });
+
+            // 创建该组的图层
+            const groupLayer = new deck.ScatterplotLayer({
+                id: `scatter-plot-split-${String(group).replace(/\s+/g, '-')}`,
+                data: groupData,
+                radiusMaxPixels: 3,
+                radiusMinPixels: 1,
+                radiusScale: 1,
+                getPosition: d => d.position,
+                getFillColor: d => colorScale(d.expressionValue),
+                getRadius: 1.5,
+                pickable: true,
+                autoHighlight: true,
+                updateTriggers: {
+                    getFillColor: [currentGeneName, currentGroupType]
+                }
+            });
+
+            layers.push(groupLayer);
+        });
+
+        featureDeckgl.setProps({
+            layers: layers
+        });
+
+        // 创建分割视图标签
+        createSplitViewLabels(groups, rows, cols, spacing);
+
+        console.log('Split view created with', groups.length, 'groups');
+    }
+
+    // 创建分割视图标签
+    function createSplitViewLabels(groups, rows, cols, spacing) {
+        // 清理现有标签
+        cleanupLabels();
+
+        const container = document.getElementById('visualization-container');
+
+        groups.forEach((group, index) => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            const offsetX = (col - (cols - 1) / 2) * spacing;
+            const offsetY = ((rows - 1) / 2 - row) * spacing;
+
+            const label = document.createElement('div');
+            label.className = 'split-view-label';
+            label.textContent = group;
+            label.style.left = `calc(50% + ${offsetX * 10}px)`;
+            label.style.top = `calc(50% + ${-offsetY * 10}px)`;
+            label.style.transform = 'translate(-50%, -50%)';
+
+            container.appendChild(label);
+        });
+    }
+
+    // 重绘图表
+    function redrawFeaturePlot() {
+        if (currentViewMode === 'combined') {
+            createCombinedView();
+        } else {
+            createSplitView();
+        }
+
+        updateStats();
+    }
+
+    // 更新统计信息
+    function updateStats() {
+        const statsElement = document.getElementById('statsInfo');
+        if (statsElement && cellData) {
+            const groupCount = currentViewMode === 'split'
+                ? [...new Set(cellData.map(d => d[currentGroupType]))].length
+                : 1;
+
+            statsElement.innerHTML = `
+                    Gene: <strong>${currentGeneName}</strong> |
+                    View: <strong>${currentViewMode}</strong> |
+                    Group: <strong>${GROUP_TYPES[currentGroupType]}</strong> (${groupCount} groups) |
+                    Cells: <strong>${cellData ? cellData.length : 0}</strong>
+                `;
+        }
+    }
+
+    // 清理标签
+    function cleanupLabels() {
+        const existingLabels = document.querySelectorAll('.split-view-label');
+        existingLabels.forEach(label => label.remove());
+    }
+
+    // 主函数：加载基因表达数据
+    async function loadGeneExpression() {
+        const datasetId = document.getElementById('datasetId').value;
+        const geneName = document.getElementById('geneName').value;
+
+        if (!geneName) {
+            alert('Please enter a gene name');
+            return;
+        }
+
+        try {
+            showLoading();
+
+            // 更新当前状态
+            currentGeneName = geneName;
+            currentGroupType = document.getElementById('groupSelect').value;
+            currentViewMode = document.querySelector('input[name="viewMode"]:checked').value;
+
+            // 显示加载状态
+            document.getElementById('statsInfo').innerHTML = 'Loading data...';
+
+            console.log('Loading data for gene:', geneName);
+
+            // 获取合并的细胞数据（如果尚未加载）
+            if (!cellData) {
+                console.log('Loading combined cell data...');
+                cellData = await generateCellData(datasetId);
+                console.log('Loaded', cellData.length, 'cells');
+            }
+
+            console.log('Loading expression data...');
+            currentGeneData = await generateValueData(datasetId, geneName);
+
+            console.log('Data loaded, creating visualization...');
+
+            // 重新绘制
+            redrawFeaturePlot();
+
+            hideLoading();
+
+        } catch (error) {
+            console.error('Error loading gene expression:', error);
+            document.getElementById('statsInfo').innerHTML = 'Error loading data: ' + error.message;
+            hideLoading();
+        }
+    }
+
+    // 初始化事件监听器
+    function initializeEventListeners() {
+        document.getElementById('groupSelect').addEventListener('change', (e) => {
+            currentGroupType = e.target.value;
+            if (currentGeneData) {
+                redrawFeaturePlot();
+            }
+        });
+
+        document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                currentViewMode = e.target.value;
+                if (currentGeneData) {
+                    redrawFeaturePlot();
+                }
+            });
+        });
+
+        // 支持按Enter键加载基因
+        document.getElementById('geneName').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                loadGeneExpression();
+            }
+        });
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Initializing application...');
+        initializeDeckGL();
+        initializeEventListeners();
+
+        // 延迟加载默认基因，确保DeckGL完全初始化
+        setTimeout(() => {
+            console.log('Loading default gene expression...');
+            loadGeneExpression();
+        }, 500);
+    });
+
+    // 页面卸载时清理资源
+    window.addEventListener('beforeunload', function() {
+        cleanupLabels();
+        if (featureDeckgl) {
+            featureDeckgl.finalize();
+        }
+    });
+
+    // 窗口大小变化时重新调整
+    window.addEventListener('resize', function() {
+        if (featureDeckgl && currentGeneData) {
+            setTimeout(() => {
+                redrawFeaturePlot();
+            }, 100);
+        }
+    });
+</script>
+</body>
+</html>

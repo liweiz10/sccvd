@@ -1,0 +1,172 @@
+<!doctype html>
+
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+  <style>
+    .bg-blue-lt{float: right}
+    .list-group {
+      --tblr-list-group-item-padding-x: 1.25rem;
+      --tblr-list-group-item-padding-y: 0.75rem;}
+    .card-header {
+      --tblr-card-cap-padding-x: 1.25rem;
+      --tblr-card-cap-padding-y: 0.65rem;}
+    .table th {
+      text-transform: none !important;
+    }
+  </style>
+  <body >
+
+    <div class="page">
+      <!-- Navbar -->
+      <header th:replace="inc/inc :: header"></header>
+
+      <div class="page-wrapper">
+        <!-- Page body -->
+        <div class="page-body">
+          <div class="container-xl">
+            <div class="row">
+              <div class="col-md-3">
+                <div class="card text-dark pb-1 mb-3">
+                  <div class="card-header">
+                    <div class="card-title">Species</div>
+                  </div>
+                  <div style="padding-left: 1rem;padding-right: 1rem;">
+                    <input type="text" class="form-control form-control-sm" id="tab1-search-input" style="border: none" placeholder="Search" aria-label="Search (enter the characters of interest)">
+                  </div>
+                  <ul class="list-group list-group-flush" id="tab1" style="overflow-y:auto;"></ul>
+                </div>
+
+                <div class="card text-dark pb-1 mb-3">
+                  <div class="card-header">
+                    <div class="card-title">Tissue</div>
+                  </div>
+                  <div style="padding-left: 1rem;padding-right: 1rem;">
+                    <input type="text" class="form-control form-control-sm" id="tab2-search-input" style="border: none" placeholder="Search" aria-label="Search (enter the characters of interest)">
+                  </div>
+                  <ul class="list-group list-group-flush" id="tab2" style="overflow-y:auto;"></ul>
+                </div>
+
+                <div class="card text-dark pb-1 mb-3">
+                  <div class="card-header">
+                    <div class="card-title">Disease</div>
+                  </div>
+                  <div style="padding-left: 1rem;padding-right: 1rem;">
+                    <input type="text" class="form-control form-control-sm" id="tab3-search-input" style="border: none" placeholder="Search" aria-label="Search (enter the characters of interest)">
+                  </div>
+                  <ul class="list-group list-group-flush" id="tab3" style="overflow-y:auto;"></ul>
+                </div>
+
+                <div class="card text-dark pb-1 mb-3">
+                  <div class="card-header">
+                    <div class="card-title">Treatment</div>
+                  </div>
+                  <ul class="list-group list-group-flush" id="tab4" style="overflow-y:auto;"></ul>
+                </div>
+
+                <div class="card text-dark pb-1 mb-3" style="display: none">
+                  <div class="card-header">
+                    <div class="card-title">Technology</div>
+                  </div>
+                  <ul class="list-group list-group-flush" id="tab5" style="overflow-y:auto;"></ul>
+                </div>
+              </div>
+              <div class="col-md-9">
+                <div class="card">
+                  <div class="card-body">
+                    <div id="table-default" class="table-responsive">
+                      <table class="table" id="sampleTable">
+                        <thead>
+                        <tr>
+                          <th>SampleID</th>
+                          <th>GSEID</th>
+                          <th>GSMID</th>
+                          <th>SampleName</th>
+                          <th>Species</th>
+                          <th>Tissue</th>
+                          <th>Age</th>
+                          <th>Sex</th>
+                          <th>Treatment</th>
+                          <th>Disease</th>
+                          <th>Times</th>
+<!--                          <th>Sample</th>-->
+                          <th>Genomic</th>
+                          <th>Technology</th>
+                          <th>Strain</th>
+                          <th>PMID</th>
+                          <!--<th>article</th>-->
+                          <th>Journal</th>
+                          <th>Year</th>
+                        </tr>
+                        </thead>
+                        <tbody class="table-tbody">
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <footer th:replace="inc/inc :: footer"></footer>
+      </div>
+    </div>
+    <div th:replace="inc/plugins :: script"></div>
+
+
+    <script th:src="@{/js/browse.js}"></script>
+    <script th:inline="none">
+      <!--   参数与样本信息表的获取   -->
+      getSampleTable()
+      tab1()
+      tab2()
+      tab3()
+      tab4()
+      tab5()
+      datatablesShow()
+    </script>
+
+    <script>
+      $(function(){
+        $('#tab1-search-input').on('keyup',function(){
+          const $str=$('#tab1-search-input').val();
+          $('#tab1 li').each(function(){
+            if($(this).text().toUpperCase().indexOf($str.toUpperCase())>=0){
+              $(this).show();
+            }
+            else{
+              $(this).hide();
+            }
+          });
+        });
+
+        $('#tab2-search-input').on('keyup',function(){
+          const $str=$('#tab2-search-input').val();
+          $('#tab2 li').each(function(){
+            if($(this).text().toUpperCase().indexOf($str.toUpperCase())>=0){
+              $(this).show();
+            }
+            else{
+              $(this).hide();
+            }
+          });
+        });
+
+        $('#tab3-search-input').on('keyup',function(){
+          const $str=$('#tab3-search-input').val();
+          $('#tab3 li').each(function(){
+            if($(this).text().toUpperCase().indexOf($str.toUpperCase())>=0){
+              $(this).show();
+            }
+            else{
+              $(this).hide();
+            }
+          });
+        });
+      })
+    </script>
+
+  </body>
+</html>

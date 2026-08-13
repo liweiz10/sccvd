@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+  <style>
+    #select-celltype-selectized{position: unset !important;}
+    .table th {
+      text-transform: none !important;
+    }
+  </style>
+  <body >
+    <div class="page">
+      <!-- Navbar -->
+      <header th:replace="inc/inc :: header"></header>
+
+      <div class="page-wrapper">
+        <!-- Page body -->
+        <div class="page-body">
+          <div class="container-xl">
+            <div class="row">
+              <div class="col-md-12">
+                <div class="card card-stacked">
+                  <div class="ribbon ribbon-top bg-blue">
+                    <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-presentation-analytics"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 12v-4" /><path d="M15 12v-2" /><path d="M12 12v-1" /><path d="M3 4h18" /><path d="M4 4v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-10" /><path d="M12 16v4" /><path d="M9 20h6" /></svg>
+                  </div>
+                  <div class="card-body">
+                    <h3 class="card-title">Search Result</h3>
+                    <table class="table" id="searchTab">
+                      <tbody class="table-tbody">
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer th:replace="inc/inc :: footer"></footer>
+      </div>
+    </div>
+    <div th:replace="inc/plugins :: script"></div>
+    <script th:src="@{/js/search.js}"></script>
+  </body>
+  <script th:inline="javascript">
+    let data = [[${data}]];
+    let type = [[${type}]];
+    searchTab(data,type)
+</script>
+</html>

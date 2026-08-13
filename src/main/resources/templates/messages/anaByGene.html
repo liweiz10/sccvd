@@ -1,0 +1,1572 @@
+<!doctype html>
+
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+<style>
+    .hr-text{text-transform: none;}
+    table th {
+        text-transform: none !important;
+    }
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+        overflow-x: hidden;
+    }
+    .page-body {
+        overflow-y: auto;
+        height: calc(100vh - 120px);
+    }
+    .visualization-wrapper {
+        margin-top: 20px;
+    }
+    .visualization-container-wrapper {
+        display: flex;
+        gap: 20px;
+        height: 600px;
+        margin-bottom: 20px;
+    }
+    .control-panel {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        width: 400px;
+        flex-shrink: 0;
+        overflow-y: auto;
+        max-height: 100%;
+    }
+    .visualization-container {
+        position: relative;
+        flex: 1;
+        min-height: 500px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    #map {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+    .info-panel {
+        position: absolute;
+        bottom: 15px;
+        right: 15px;
+        padding: 10px 15px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        z-index: 1000;
+        font-size: 12px;
+    }
+    .split-view-label {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: bold;
+        border: 1px solid #e0e0e0;
+        pointer-events: none;
+        z-index: 100;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        white-space: nowrap;
+    }
+    .control-group {
+        margin-bottom: 20px;
+    }
+    .control-group:last-child {
+        margin-bottom: 0;
+    }
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+        font-size: 14px;
+    }
+    select, input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        background: #fff;
+        transition: border-color 0.2s;
+    }
+    select:focus, input[type="text"]:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+    }
+    .radio-group {
+        display: flex;
+        gap: 15px;
+        margin-top: 8px;
+    }
+    .radio-group label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: normal;
+        cursor: pointer;
+        margin-bottom: 0;
+        font-size: 13px;
+    }
+    .gene-input-group {
+        display: flex;
+        gap: 10px;
+    }
+    .gene-input-group input {
+        flex: 1;
+    }
+    .gene-input-group button {
+        padding: 10px 16px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        white-space: nowrap;
+        font-weight: 500;
+        transition: background-color 0.2s;
+    }
+    .gene-input-group button:hover {
+        background: #0056b3;
+    }
+    .loading {
+        display: none;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.95);
+        padding: 20px 30px;
+        border-radius: 8px;
+        z-index: 1001;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-weight: 500;
+    }
+    /* 响应式设计 */
+    @media (max-width: 1024px) {
+        .visualization-container-wrapper {
+            flex-direction: column;
+            height: auto;
+        }
+        .control-panel {
+            width: 100%;
+            max-height: 300px;
+        }
+        .visualization-container {
+            min-height: 600px;
+        }
+    }
+    /* 滚动条样式 */
+    .control-panel::-webkit-scrollbar {
+        width: 6px;
+    }
+    .control-panel::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    .control-panel::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+    .control-panel::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+    /* 控制面板标题 */
+    .divider {
+        height: 1px;
+        background: #f0f0f0;
+        margin: 20px 0;
+    }
+</style>
+<body >
+
+<div class="page">
+    <!-- Navbar -->
+    <header th:replace="inc/inc :: header"></header>
+
+    <div class="page-wrapper">
+        <!-- Page body -->
+        <div class="page-body">
+            <div class="container-xl">
+                <!-- 基因信息卡片 -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label class="form-label">Gene Expression Visualization
+                                    <span data-bs-toggle="toast" data-bs-target="#toast-geneDescription" id="showGeneDescription" onclick="showGeneDescription()">
+                              <svg data-bs-toggle="tooltip" data-bs-placement="top" title="Click to view the selected gene summary." xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-info-circle"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg>
+                            </span>
+                                </label>
+                                <div class="mb-3 col-md-6">
+                                    <select id="select-feature" placeholder="Input placeholder"></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="table-responsive">
+                                    <label class="form-label">Summary of Cerebrovascular Disease-Related Genes Retrieved from GeneCards</label>
+                                    <table class="table table-vcenter table-nowrap">
+                                        <thead>
+                                        <tr>
+                                            <th>Symbol</th>
+                                            <th>Description</th>
+                                            <th>Category</th>
+                                            <th>Uniprotid</th>
+                                            <th>Gifts</th>
+                                            <th>Gcid</th>
+                                            <th>Score</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody id="geneTableBody">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12" id="tabContainer">
+                                <table class="table table-nowrap display compact" id="tab1">
+                                    <tbody class="table-tbody">
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-md-12" style="text-align: center;">
+                                <button class="btn btn-outline-success" id="submit" onclick="toShowGeneExp()">Submit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12" id="prompt">
+                        <div class="hr-text text-red">Please select a sample for analysis of the gene of interest.</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h3>Cell Type-Specific Differential Expression of Gene <span id="currentGene" style="color: red"></span> in Dataset <span id="currentDataset" style="color: red"></span></h3>
+                                <table class="table table-nowrap display compact" id="tabDeg">
+                                    <thead>
+                                    <!--<tr>
+                                        <th>Gene</th>
+                                        <th>Celltype</th>
+                                        <th>Pvalue</th>
+                                        <th>AvgLog2FC</th>
+                                        <th>PvalueAdj</th>
+                                        <th>PCT1</th>
+                                        <th>PCT2</th>
+                                    </tr>-->
+                                    </thead>
+                                    <tbody class="table-tbody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 基因表达可视化 -->
+                <div class="visualization-wrapper">
+                    <div class="visualization-container-wrapper">
+                        <!-- 左侧控制面板 -->
+                        <div class="control-panel">
+                            <h3>Gene Expression Controls</h3>
+
+                            <div class="control-group">
+                                <label for="groupSelect">Group By</label>
+                                <select id="groupSelect">
+                                    <option value="origident">Orig.ident</option>
+                                    <option value="sex">Sex</option>
+                                    <option value="age">Age</option>
+                                    <option value="times">Time</option>
+                                    <option value="tissue">Tissue</option>
+                                    <option value="treatment">Treatment</option>
+                                    <option value="celltype">Cell Type</option>
+                                </select>
+                            </div>
+
+                            <div class="control-group">
+                                <label>View Mode</label>
+                                <div class="radio-group">
+                                    <label>
+                                        <input type="radio" name="viewMode" value="split" checked>
+                                        Split
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="viewMode" value="combined">
+                                        Combined
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="control-group">
+                                <label>View Cell Type</label>
+                                <div id="node" style="height: 320px;"></div>
+                            </div>
+                        </div>
+
+                        <!-- 右侧可视化区域 -->
+                        <div class="visualization-container" id="visualization-container">
+                            <div id="map"></div>
+                            <div class="info-panel" id="infoPanel">
+                                <div id="statsInfo">Select a gene to visualize expression</div>
+                            </div>
+                            <div class="loading" id="loadingIndicator">Loading data...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">Gene expression across groups</div>
+                            <div class="card-body">
+                                <div id="geneExpressionViolin" style="height: 300px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">SCENIC TF–gene regulon</div>
+                            <div class="card-body">
+                                <div id="geneTfNetwork" style="height: 300px;"></div>
+                                <label id="geneTfNetworkTip">The current dataset does not contain this data.</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer th:replace="inc/inc :: footer"></footer>
+    </div>
+</div>
+<div th:replace="inc/plugins :: script"></div>
+<!--<script src="https://unpkg.com/deck.gl@^9.0.0/dist.min.js"></script>-->
+<script th:src="@{/js/deckgl9.0.0.dist.min.js}"></script>
+<script th:src="@{/js/d3.v7.min.js}"></script>
+<script th:src="@{/js/plotly-2.34.0.min.js}"></script>
+<script>
+    const selectedSamples = {'sample1':''};
+    const selectedTechnology = {'sample1':''};
+    function getGeneDescription(id,gene) {
+        $.ajax({
+            url: "getGeneDescription",
+            type: "GET",
+            dataType: "json",
+            async: true,
+            data: {id: id, gene: gene},
+            success: function(res) {
+                if (res.data==null){
+                    $("#geneDescription").text("")
+                    $("#geneSummary").text("")
+                    $("#geneSynonyms").text("")
+                    $("#geneSymbol").text("")
+                    $("#genedb").text("")
+                    $('#geneCard').attr('href', "https://www.genecards.org")
+                    $('#geneId').attr('href', "https://www.ncbi.nlm.nih.gov/gene/")
+                }else {
+                    $("#geneDescription").text(res.data.description)
+                    $("#geneSummary").text(res.data.summary)
+                    $("#geneSynonyms").text(res.data.synonyms)
+                    $("#geneSymbol").text(res.data.symbol)
+                    $("#genedb").text(res.data.dbxrefs)
+                    $('#geneCard').attr('href', "https://www.genecards.org/cgi-bin/carddisp.pl?gene=" + res.data.symbol)
+                    $('#geneId').attr('href', "https://www.ncbi.nlm.nih.gov/gene/" + res.data.geneid)
+                }
+            }
+        });
+    }
+    function processGeneData(res) {
+        const tbody = document.getElementById('geneTableBody');
+        tbody.innerHTML = ''; // 清空现有内容
+        if (res.data && res.data.length > 0) {
+            res.data.forEach(gene => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                        <td><a href="https://www.genecards.org/cgi-bin/carddisp.pl?gene=${gene.symbol}&keywords=stroke" target="_blank">${gene.symbol}</a></td>
+                        <td>${gene.description}</td>
+                        <td>${gene.category}</td>
+                        <td>${gene.uniprotid}</td>
+                        <td>${gene.gifts}</td>
+                        <td>${gene.gcid}</td>
+                        <td>${gene.score}</td>
+                    `;
+                tbody.appendChild(row);
+            });
+        } else {
+            tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="no-data">No association between this gene and Stroke was found in GeneCard!</td>
+                    </tr>
+                `;
+        }
+    }
+    function getGeneDescription(gene) {
+        $.ajax({
+            url: "getGeneCardByStroke",
+            type: "GET",
+            dataType: "json",
+            async: true,
+            data: {gene: gene},
+            success: function(res) {
+                processGeneData(res)
+            }
+        });
+    }
+    function getGeneDescription(gene) {
+        $.ajax({
+            url: "getGeneCardByStroke",
+            type: "GET",
+            dataType: "json",
+            async: true,
+            data: {gene: gene},
+            success: function(res) {
+                processGeneData(res)
+            }
+        });
+    }
+
+    function format(d) {
+        if (!d) {
+            console.log('format function called with undefined or null parameter');
+            return '<div>No data available</div>';
+        }
+
+        const safeSplit = (str, separator = "|") => {
+            return str ? str.split(separator) : [];
+        };
+
+        let start = '<table class="table table-hover"><thead><tr><th>GSMID</th><th>AGE</th><th>SEX</th><th>TIMES</th><th>TISSUE</th><th>TREATMENT</th><th>SampleName</th></tr></thead><tbody>';
+        const end = '</tbody></table>';
+
+        const gsmarr = safeSplit(d.gsmId);
+        const agearr = safeSplit(d.age);
+        const sexarr = safeSplit(d.sex);
+        const timearr = safeSplit(d.times);
+        const tissuearr = safeSplit(d.tissue);
+        const treatmentarr = safeSplit(d.treatment);
+        const samplearr = safeSplit(d.sampleName);
+
+        const maxLength = Math.max(
+            gsmarr.length,
+            agearr.length,
+            sexarr.length,
+            timearr.length,
+            tissuearr.length,
+            treatmentarr.length,
+            samplearr.length
+        );
+
+        for (let i = 0; i < maxLength; i++) {
+            const tr = '<tr>' +
+                '<td>' + (gsmarr[i] || '') + '</td>' +
+                '<td>' + (samplearr[i] || '') + '</td>' +
+                '<td>' + (agearr[i] || '') + '</td>' +
+                '<td>' + (sexarr[i] || '') + '</td>' +
+                '<td>' + (timearr[i] || '') + '</td>' +
+                '<td>' + (tissuearr[i] || '') + '</td>' +
+                '<td>' + (treatmentarr[i] || '') + '</td>' +
+                '</tr>';
+            start = start + tr;
+        }
+
+        const article = '<p><strong>Article:  </strong>' + (d.article || '') + '</p>';
+        const descript = '<p><strong>Description:  </strong>' + (d.descript || '') + '</p>';
+
+        return (start + end + article + descript);
+    }
+
+    function getSampleAna(data) {
+        if ($.fn.DataTable.isDataTable('#tab1')) {
+            $('#tab1').DataTable().destroy(true);
+            $('#tabContainer').html(`
+                <table class="table table-nowrap display compact" id="tab1">
+                    <tbody class="table-tbody">
+                    </tbody>
+                </table>
+            `);
+        }
+
+        const tab = $('#tab1').DataTable({
+            data: data.data,
+            rowId: 'id',
+            stateSave: true,
+            bProcessing: true,
+            serverSide: false,
+            searching: true,
+            paging: true,
+            ordering: true,
+            scrollX: true,
+            lengthMenu: [],
+            destroy: true,
+            scrollCollapse: true,
+            scrollY: '400px',
+            columns: [
+                {
+                    className: 'dt-control',
+                    orderable: false,
+                    data: null,
+                    defaultContent: ''
+                },
+                {
+                    "data": "sampleId",
+                    "render": function (data, type, row, meta) {
+                        return "<a target='_blank' href='getDetailViewGL?id=" + row.sampleId + "'>" + row.sampleId + "</a>";
+                    },
+                    "title":"SampleID"
+                },
+                {"data": "expr_cell_ratios","title":"Expr_ratio"},
+                {"data": "mean_expressions","title":"Mean_expr"},
+                {"data": "percentiles","title":"Expr_percentile"},
+                {"data": "gse_sample","title":"Sample"},
+                {"data": "species","title":"species"},
+                {"data": "gse_age","title":"age"},
+                {"data": "gse_treatment","title":"Treatment"},
+                {"data": "gse_sex","title":"sex"},
+                {"data": "technology","title":"Technology"},
+                {"data": "journal","title":"journal"}
+            ],
+            oLanguage: {
+                "sProcessing": 'processing......',
+                "sLengthMenu": "_MENU_ entries per page",
+                "sZeroRecords": "No matching data found",
+                "sInfo": "Showing _START_ to _END_ of _TOTAL_ entries",
+                "sInfoEmpty": "Showing _START_ to _END_ of _TOTAL_ entries",
+                "sInfoFiltered": "( Filter from _MAX_ records )",
+                "sSearch": "Search: ",
+                "oPaginate": {
+                    "sFirst": "home",
+                    "sPrevious": "‹",
+                    "sNext": "›",
+                    "sLast": "end"
+                }
+            },
+            initComplete: function(settings, json) {
+                createTableHandlers(this, selectedSamples, "sample1",  selectedTechnology);
+                var api = this.api();
+                var tooltips = {
+                    2: 'Proportion of cells expressing the gene in the dataset',
+                    3: 'Mean expression level of the gene in the dataset',
+                    4: 'Expression percentile of the gene within the dataset'
+                };
+                // 只为指定列设置提示
+                Object.keys(tooltips).forEach(function(colIndex) {
+                    $(api.column(parseInt(colIndex)).header())
+                        .attr('title', tooltips[colIndex]).css('cursor', 'help');
+                });
+            }
+        });
+        return tab;
+    }
+
+    function createTableHandlers(table, storageObj, sampleKey, technologyObj) {
+        if (!table) {
+            console.log('Table object is invalid');
+            return;
+        }
+        if ($.fn.DataTable.isDataTable('#tab1')) {
+            table = $('#tab1').DataTable();
+        } else {
+            console.log('DataTables no init');
+        }
+        table.on('click', '> tbody > tr', (e) => {
+            const hasDataDtRow = e.currentTarget.hasAttribute('data-dt-row');
+            let classList = e.currentTarget.classList;
+            if (classList.contains('selected')) {
+                classList.remove('selected');
+                storageObj[sampleKey] = "";
+                technologyObj[sampleKey] = "";
+            } else {
+                if (!hasDataDtRow) {
+                    table.rows('.selected').nodes().each((row) => row.classList.remove('selected'));
+                    classList.add('selected');
+                    storageObj[sampleKey] = e.currentTarget.querySelector('td:nth-child(2)').textContent;
+                    technologyObj[sampleKey] = e.currentTarget.querySelector('td:nth-child(11)').textContent;
+                }
+            }
+        });
+
+        table.on('requestChild.dt', function(e, row) {
+            row.child(format(row.data())).show();
+        });
+
+        table.on('click', 'tbody td.dt-control', function(e) {
+            let tr = e.target.closest('tr');
+            let row = table.row(tr);
+
+            if (row.child.isShown()) {
+                row.child.hide();
+            } else {
+                row.child(format(row.data())).show();
+            }
+        });
+    }
+
+    function getGeneForDatas(gene) {
+        $.ajax({
+            url: "getGeneForDatas",
+            type: "GET",
+            dataType: "json",
+            async: true,
+            data: {gene: gene},
+            success: function(res) {
+                $('#tab1').empty();
+                const tab = getSampleAna(res);
+            },
+            error: function(xhr, status, error) {
+                console.log('AJAX error:', error);
+            }
+        });
+    }
+
+    function getDegTable(id, gene) {
+        var language = {
+            "sProcessing": 'processing......',
+            "sLengthMenu": "_MENU_ entries per page",
+            "sZeroRecords": "No matching data found",
+            "sInfo": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "sInfoEmpty": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "sInfoFiltered": "( Filter from _MAX_ records )",
+            "sSearch": "Search: ",
+            "oPaginate": {
+                "sFirst": "home",
+                "sPrevious": "‹",
+                "sNext": "›",
+                "sLast": "end"
+            }
+        }
+        // 先处理销毁与重置
+        var $table = $("#tabDeg");
+        if ($.fn.dataTable.isDataTable($table)) {
+            $table.DataTable().destroy();   // 销毁实例
+        }
+        $table.empty(); // 清空所有内容（thead, tbody 等）
+        // 根据条件构建新的表头和列定义
+        var columnsDef, ajaxUrl;
+        if (selectedTechnology["sample1"] == "scATAC-seq" || selectedTechnology["sample1"] == "snATAC-seq" || selectedTechnology["sample1"] == "sci-ATAC-seq" || selectedTechnology["sample1"] == "sciMAP-ATAC") {
+            columnsDef = [
+                {"title":"Peak","data": "peaks"},
+                {"title":"Gene","data": "gene"},
+                {"title":"Distance","data": "distance"},
+                {"title":"Pvalue","data": "pval"},
+                {"title":"AvgLog2FC","data": "avglogfc"},
+                {"title":"PCT1","data": "pct1"},
+                {"title":"PCT2","data": "pct2"},
+                {"title":"PvalueAdj","data": "p_val_adj"},
+                {"title":"Celltype","data": "celltype"}
+            ];
+            ajaxUrl = "getDegAtacTableByGene";
+        } else {
+            columnsDef = [
+                {"title":"Gene","data": "gene"},
+                {"title":"Celltype","data": "celltype"},
+                {"title":"Pvalue","data": "p_value"},
+                {"title":"AvgLog2FC","data": "avg_log2fc"},
+                {"title":"PvalueAdj","data": "p_value_adj"},
+                {"title":"PCT1","data": "pct1"},
+                {"title":"PCT2","data": "pct2"}
+            ];
+            ajaxUrl = "getDegTableByGene";
+        }
+        // 动态生成 <thead>
+        var thead = '<thead><tr>';
+        columnsDef.forEach(function(col) {
+            thead += '<th>' + col.title + '</th>';
+        });
+        thead += '</tr></thead>';
+        $table.append(thead);
+        // 初始化 DataTable
+        $table.DataTable({
+            ajax: {
+                url: ajaxUrl,
+                type: "GET",
+                async: true,
+                data: {"id": id, "gene": gene}
+            },
+            bProcessing : true,
+            serverSide: true,
+            searching: true,
+            paging: true,
+            order: [],
+            ordering: true,
+            scrollX: true,
+            destroy: true,       // 保留以防万一
+            columns: columnsDef,
+            oLanguage: language
+        });
+    }
+    /*
+    * 基因表达可视化Split功能
+    * */
+    // 全局变量
+    let featureDeckgl = null;
+    let cellData = null; // 合并的位置和元数据
+    let currentGeneData = null;
+    let currentGeneName = '';
+    let currentTechnology = '';
+    let currentGroupType = 'origident';
+    let currentViewMode = 'split';
+
+    // 固定配色方案
+    const colorArray = [];
+    colorArray.push([237, 248, 251], [102, 194, 164], [0, 109, 44]);
+
+    // 分组配置
+    const GROUP_TYPES = {
+        'origident': 'Orig.ident',
+        'sex': 'Sex',
+        'age': 'Age',
+        'times': 'Time',
+        'tissue': 'Tissue',
+        'treatment': 'Treatment',
+        'celltype': 'Cell Type'
+    };
+
+    // 显示加载指示器
+    function showLoading() {
+        document.getElementById('loadingIndicator').style.display = 'block';
+    }
+
+    // 隐藏加载指示器
+    function hideLoading() {
+        document.getElementById('loadingIndicator').style.display = 'none';
+    }
+
+    // 初始化DeckGL
+    function initializeDeckGL() {
+        const container = document.getElementById('map');
+        featureDeckgl = new deck.DeckGL({
+            container: 'map',
+            initialViewState: {
+                longitude: 0,
+                latitude: 0,
+                zoom: 4,
+                minZoom: 1,
+                maxZoom: 10
+            },
+            controller: {
+                inertia: true,
+                scrollZoom: {
+                    speed: 0.001,
+                    smooth: true
+                }
+            },
+            getTooltip: getTooltipContent,
+            width: '100%',
+            height: '100%',
+            onLoad: () => {
+                console.log('DeckGL loaded successfully');
+            }
+        });
+    }
+
+    // 工具提示内容
+    function getTooltipContent({ object }) {
+        if (!object) return null;
+
+        return {
+            html: `<div style="padding: 8px; min-width: 250px;">
+                        <div><strong>Gene:</strong> ${currentGeneName}</div>
+                        <div><strong>Expression:</strong> ${object.expressionValue?.toFixed(4) || 'N/A'}</div>
+                        <div><strong>Sample:</strong> ${object.origident || 'N/A'}</div>
+                        <div><strong>Cell type:</strong> ${object.celltype || 'N/A'}</div>
+                        <div><strong>UMAP1:</strong> ${object.x?.toFixed(4) || 'N/A'}</div>
+                        <div><strong>UMAP2:</strong> ${object.y?.toFixed(4) || 'N/A'}</div>
+                       </div>`,
+            style: {
+                backgroundColor: 'white',
+                color: '#333',
+                fontSize: '12px',
+                borderRadius: '4px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+            }
+        };
+    }
+
+    // 获取合并的细胞数据（位置+元数据）
+    async function generateCellData(id) {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: "getNodeDataGLsplit",
+                type: "GET",
+                dataType: "json",
+                data: {id: id},
+                success: function(result) {
+                    resolve(result.data);
+                },
+                error: function(xhr, status, error) {
+                    console.error('failed load data:', error);
+                    reject(error);
+                }
+            });
+        });
+    }
+    async function generateValueData(id, geneName) {
+        try {
+            const response = await $.ajax({
+                url: "getGeneExpressionValueIgnor",
+                type: "GET",
+                dataType: "json",
+                data: {"id": id, "geneName": geneName}
+            });
+            return {
+                data: response.data,
+                max: response.max
+            };
+        } catch (error) {
+            console.error('Error fetching value data:', error);
+            throw error;
+        }
+    }
+
+    // 生成颜色映射域
+    function generateArray(maxValue) {
+        return [0, maxValue / 2, maxValue];
+    }
+
+    // 创建合并视图
+    function createCombinedView() {
+        if (!cellData || !currentGeneData) return;
+        cleanupLabels();
+        const domainArray = generateArray(currentGeneData.max);
+        const colorScale = d3.scaleLinear().domain(domainArray).range(colorArray);
+        // 创建绘图数据
+        const plotData = cellData.map((cell, index) => ({
+            ...cell,
+            expressionValue: currentGeneData.data[index],
+            position: [cell.x, cell.y, 0]
+        }));
+
+        const featureLayer = new deck.ScatterplotLayer({
+            id: 'scatter-plot-combined',
+            data: plotData,
+            radiusMaxPixels: 4,
+            radiusMinPixels: 1,
+            radiusScale: 1,
+            getPosition: d => d.position,
+            getFillColor: d => colorScale(d.expressionValue),
+            getRadius: 2,
+            pickable: true,
+            autoHighlight: true,
+            updateTriggers: {
+                getFillColor: [currentGeneName]
+            }
+        });
+        featureDeckgl.setProps({
+            layers: [featureLayer]
+        });
+    }
+
+    // 创建分割视图
+    function createSplitView() {
+        if (!cellData || !currentGeneData) return;
+
+        const domainArray = generateArray(currentGeneData.max);
+        const colorScale = d3.scaleLinear().domain(domainArray).range(colorArray);
+        // 获取当前分组的所有组别
+        const groups = [...new Set(cellData.map(d => d[currentGroupType]))].sort();
+        const layers = [];
+        const spacing = 30;
+        const ySpacing = 25;
+        const scale = 0.8;
+
+        // 计算网格布局
+        const cols = Math.ceil(Math.sqrt(groups.length));
+        const rows = Math.ceil(groups.length / cols);
+
+        groups.forEach((group, index) => {
+            // 获取该组对应的数据
+            const groupData = cellData
+                .filter(cell => cell[currentGroupType] === group)
+                .map((cell, originalIndex) => {
+                    // 找到原始索引以获取对应的基因表达值
+                    const expressionIndex = cellData.indexOf(cell);
+                    return {
+                        ...cell,
+                        expressionValue: currentGeneData.data[expressionIndex],
+                        position: [cell.x, cell.y, 0]
+                    };
+                });
+
+            if (groupData.length === 0) return;
+            // 计算当前组在网格中的位置
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            const offsetX = (col - (cols - 1) / 2) * spacing;
+            const offsetY = ((rows - 1) / 2 - row) * ySpacing;
+            // 应用偏移量
+            groupData.forEach(d => {
+                d.position[0] = d.position[0] * scale + offsetX;
+                d.position[1] = d.position[1] * scale + offsetY;
+            });
+
+            // 创建该组的图层
+            const groupLayer = new deck.ScatterplotLayer({
+                id: `scatter-plot-split-${String(group).replace(/\s+/g, '-')}`,
+                data: groupData,
+                radiusMaxPixels: 4,
+                radiusMinPixels: 1,
+                radiusScale: 1,
+                getPosition: d => d.position,
+                getFillColor: d => colorScale(d.expressionValue),
+                getRadius: 1.5,
+                pickable: true,
+                autoHighlight: true,
+                updateTriggers: {
+                    getFillColor: [currentGeneName, currentGroupType]
+                }
+            });
+            layers.push(groupLayer);
+        });
+        featureDeckgl.setProps({
+            layers: layers,
+            initialViewState: {
+                longitude: 0,
+                latitude: 0,
+                zoom: 2,
+                pitch: 0,
+                bearing: 0
+            }
+        });
+        // 创建分割视图标签
+        createSplitViewLabels(groups, rows, cols, spacing);
+    }
+
+    // 创建分割视图标签
+    function createSplitViewLabels(groups, rows, cols, spacing) {
+        // 清理现有标签
+        cleanupLabels();
+        // 创建table容器
+        const tableContainer = document.createElement('div');
+        tableContainer.style.marginTop = '10px';
+        tableContainer.style.fontSize = '10px';
+
+        // 添加标题
+        const title = document.createElement('strong');
+        title.textContent = 'Plot Layout (Rows × Columns):';
+        title.style.fontSize = '12px';
+        tableContainer.appendChild(title);
+
+        // 创建table
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.fontSize = '10px';
+
+        // 创建表格行
+        for (let row = 0; row < rows; row++) {
+            const tr = document.createElement('tr');
+            for (let col = 0; col < cols; col++) {
+                const td = document.createElement('td');
+                td.style.padding = '4px 5px';
+                td.style.border = '1px solid #e0e0e0';
+                td.style.textAlign = 'center';
+                const index = row * cols + col;
+                if (index < groups.length) {
+                    const group = groups[index];
+                    td.textContent = group;
+                    td.title = `Position: Row ${row + 1}, Column ${col + 1}`;
+                } else {
+                    td.style.backgroundColor = '#f9f9f9'; // 空单元格
+                }
+                tr.appendChild(td);
+            }
+            table.appendChild(tr);
+        }
+        tableContainer.appendChild(table);
+        const infoPanel = document.querySelector('.info-panel');// 将table容器添加到info-panel中
+        // 移除可能已存在的容器
+        const existingContainer = infoPanel.querySelector('.split-view-labels');
+        if (existingContainer) {
+            existingContainer.remove();
+        }
+        tableContainer.className = 'split-view-labels';
+        infoPanel.appendChild(tableContainer);
+    }
+
+    // 重绘图表
+    function redrawFeaturePlot() {
+        if (currentViewMode === 'combined') {
+            createCombinedView();
+        } else {
+            createSplitView();
+        }
+        updateStats();
+    }
+
+    // 更新统计信息
+    function updateStats() {
+        const statsElement = document.getElementById('statsInfo');
+        if (statsElement && cellData) {
+            const groupCount = currentViewMode === 'split'
+                ? [...new Set(cellData.map(d => d[currentGroupType]))].length
+                : 1;
+
+            statsElement.innerHTML = `
+                    Gene: <strong>${currentGeneName}</strong> |
+                    View: <strong>${currentViewMode}</strong> |
+                    Group: <strong>${GROUP_TYPES[currentGroupType]}</strong> (${groupCount} groups) |
+                    Cells: <strong>${cellData ? cellData.length : 0}</strong>
+                `;
+        }
+    }
+
+    // 清理标签
+    function cleanupLabels() {
+        // 同时清理info-panel中的标签容器
+        const infoPanel = document.querySelector('.info-panel');
+        const existingLabelContainer = infoPanel.querySelector('.split-view-labels');
+        if (existingLabelContainer) {
+            existingLabelContainer.remove();
+        }
+    }
+
+
+    // 主函数：加载基因表达数据
+    async function loadGeneExpression() {
+        const datasetId = selectedSamples["sample1"]
+        if (!currentGeneName) {
+            alert('Please enter a gene name');
+            return;
+        }
+        try {
+            showLoading();
+            // 更新当前状态
+            currentGroupType = document.getElementById('groupSelect').value;
+            currentViewMode = document.querySelector('input[name="viewMode"]:checked').value;
+
+            // 显示加载状态
+            document.getElementById('statsInfo').innerHTML = 'Loading data...';
+            cellData = await generateCellData(datasetId);
+            currentGeneData = await generateValueData(datasetId, currentGeneName);
+            geneExpressionViolin(cellData,currentGeneData,currentGroupType);
+            // 重新绘制
+            redrawFeaturePlot();
+            hideLoading();
+        } catch (error) {
+            console.error('Error loading gene expression:', error);
+            document.getElementById('statsInfo').innerHTML = 'Error loading data: ' + error.message;
+            hideLoading();
+        }
+    }
+
+    // 初始化事件监听器
+    function initializeEventListeners() {
+        document.getElementById('groupSelect').addEventListener('change', (e) => {
+            currentGroupType = e.target.value;
+            if (currentGeneData) {
+                redrawFeaturePlot();
+            }
+            toRunUmapView(selectedSamples["sample1"], currentGroupType);
+            geneExpressionViolin(cellData,currentGeneData,currentGroupType);
+        });
+
+        document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                currentViewMode = e.target.value;
+                if (currentGeneData) {
+                    redrawFeaturePlot();
+                }
+            });
+        });
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Initializing application...');
+        initializeDeckGL();
+        initializeEventListeners();
+    });
+
+    // 页面卸载时清理资源
+    window.addEventListener('beforeunload', function() {
+        cleanupLabels();
+        if (featureDeckgl) {
+            featureDeckgl.finalize();
+        }
+    });
+
+    // 窗口大小变化时重新调整
+    window.addEventListener('resize', function() {
+        if (featureDeckgl && currentGeneData) {
+            setTimeout(() => {
+                redrawFeaturePlot();
+            }, 100);
+        }
+    });
+
+    /*
+    * 左侧细胞类型注释可视化分析图部分功能
+    * */
+    /*定义deck cluster umap的全局变量*/
+    let umapData = null;
+    let clusterValue = null;
+    let group = null;
+    let colorMap = null; //保存数组颜色映射，使小提琴图和umap图相同分组有相同颜色。注意，基因表达的小提琴图要在umap图之后绘制才行，因为要先生成分组颜色映射。
+    const umapGL = new deck.DeckGL({
+        container: document.getElementById('node'),
+        initialViewState: {
+            longitude: 0,
+            latitude: 0,
+            zoom: 2.5,
+            minZoom: 2,
+            maxZoom: 6
+        },
+        controller: {
+            inertia: true,
+            scrollZoom: {
+                speed: 0.001,
+                smooth: true
+            }
+        }
+    });
+    function colorMapFun(categorys) {
+        const colors = []
+        colors.push([31,120,180],[51,160,44],[227,26,28],[255,127,0],[106,61,154],[177,89,40],[166,206,227],[178,223,138],[251,154,153],[253,191,111],[202,178,214],[255,255,153],[141,211,199],[255,255,179],[190,186,218],[251,128,114],[128,177,211],[253,180,98],[179,222,105],[252,205,229],[217,217,217],[188,128,189],[204,235,197],[255,237,111]);
+        const colorMap = new Map();//为每个细胞类型映射颜色
+        categorys.forEach((type, index) => {
+            colorMap.set(type, colors[index % colors.length]);
+        });
+        return colorMap;
+    }
+    /*创建deck cluster umap功能性函数*/
+    function labelChange() {  /*当name=“label”标签的checked发生变化时，调整umap绘图。复选框选择值的变化*/
+        redraw("noUpdateLabel",umapData,clusterValue,umapGL,group);
+    }
+    function labelShowFun(param) {  /*当name=“label”标签的checked发生变化时，调整umap绘图。鼠标指向时的变化*/
+        clusterValue = param;
+        redraw("noUpdateLabel",umapData,clusterValue,umapGL,group);
+    }
+    function redraw(updateLabel,umapData,clusterValue,umapGL,group){
+        /*
+        * updateLabel:分类标签，值为noUpdateLabel（不发生变化）和updateLabel（更新cluster文本框）
+        * umapData:绘图数据
+        * clusterValue:鼠标指向的cluster的值，当未选时为null。
+        * umapGL:基于DeckGL的umap绘图。
+        * group:下拉菜单当前值，celltype、cluster、origident、sex
+        * */
+        const selectedCheckboxes = document.querySelectorAll('#labelName input[name="label"]:checked');
+        let selectCluster = Array.from(selectedCheckboxes).map(checkbox => checkbox.value); //selectCluster存储的是当前选中的复选框，也就是展示的clusters
+        let categoryText = null;
+        if (group=="celltype"){
+            categoryText = umapData.celltypeText
+        }else if (group=="clusters"){
+            categoryText = umapData.clusterText
+        }else if (group=="origident"){
+            categoryText = umapData.origText
+        }else if (group=="sex"){
+            categoryText = umapData.sexText
+        }else if (group=="age"){
+            categoryText = umapData.ageText
+        }else if (group=="times"){
+            categoryText = umapData.timesText
+        }else if (group=="tissue"){
+            categoryText = umapData.tissueText
+        }else if (group=="treatment"){
+            categoryText = umapData.treatmentText
+        }
+
+        let categorys = [...new Set(categoryText.map(item => item.category))];
+        colorMap = colorMapFun(categorys);
+        if (updateLabel!="noUpdateLabel"){  /*根据category生成umap图分类标签*/
+            selectCluster = categorys;
+            let labelNameHtml = "<div class='form-label'>Clusters and Cell Count</div>\n"
+            $.each(categorys, function(index, value) {
+                labelNameHtml = labelNameHtml +
+                    "<label class='form-check' onmouseover='labelShowFun(\""+ value +"\")'>\n" +
+                    " <input class='form-check-input' type='checkbox' onchange='labelChange()' name='label' value='"+ value +"' style='background-color: rgb("+ colorMap.get(value) +")' checked />\n" +
+                    " <span class='form-check-label'>" + value + " <span class='status status-blue'>" + categoryText[index].count + "</span>\n" + "</span>\n" +
+                    "</label>\n"
+            });
+            $('#labelName').html(labelNameHtml);
+        }
+        const nodelayer = new deck.ScatterplotLayer({
+            id: 'scatter-plot',
+            data: umapData.data,
+            getRadius: d => {
+                if (group=="celltype") {
+                    return  d.celltype == clusterValue ? 1000:1;
+                } else if (group=="clusters") {
+                    return  d.clusters == clusterValue ? 1000:1;
+                }else if (group=="origident") {
+                    return  d.origident == clusterValue ? 1000:1;
+                }else if (group=="sex") {
+                    return  d.sex == clusterValue ? 1000:1;
+                }else if (group=="age") {
+                    return  d.age == clusterValue ? 1000:1;
+                }else if (group=="times") {
+                    return  d.times == clusterValue ? 1000:1;
+                }else if (group=="tissue") {
+                    return  d.tissue == clusterValue ? 1000:1;
+                }else if (group=="treatment") {
+                    return  d.treatment == clusterValue ? 1000:1;
+                }
+            },
+            radiusMaxPixels: 100,
+            radiusMinPixels: 1,
+            radiusScale: 20,
+            getPosition: d => [d.x, d.y],
+            getFillColor: d => {
+                if (group=="celltype") {
+                    return  colorMap.get(d.celltype) || [192, 192, 192];
+                } else if (group=="clusters") {
+                    return  colorMap.get(d.clusters) || [192, 192, 192];
+                }else if (group=="origident") {
+                    return  colorMap.get(d.origident) || [192, 192, 192];
+                }else if (group=="sex") {
+                    return  colorMap.get(d.sex) || [192, 192, 192];
+                }else if (group=="age") {
+                    return  colorMap.get(d.age) || [192, 192, 192];
+                }else if (group=="times") {
+                    return  colorMap.get(d.times) || [192, 192, 192];
+                }else if (group=="tissue") {
+                    return  colorMap.get(d.tissue) || [192, 192, 192];
+                }else if (group=="treatment") {
+                    return  colorMap.get(d.treatment) || [192, 192, 192];
+                }
+            },
+            getFilterCategory: d => {
+                if (group=="celltype") {
+                    return d.celltype;
+                } else if (group=="clusters") {
+                    return d.clusters;
+                }else if (group=="origident") {
+                    return d.origident;
+                }else if (group=="sex") {
+                    return d.sex;
+                }else if (group=="age") {
+                    return d.age;
+                }else if (group=="times") {
+                    return d.times;
+                }else if (group=="tissue") {
+                    return d.tissue;
+                }else if (group=="treatment") {
+                    return d.treatment;
+                }
+            },
+            updateTriggers: {
+                getRadius: [clusterValue],  /*鼠标悬停时点的大小变化*/
+                getFillColor: [group],  /*当 group 变化时，强制重新执行 getFillColor*/
+                getFilterCategory: [group]
+            },
+            filterCategories: selectCluster,
+            extensions: [new deck.DataFilterExtension({categorySize: 1})],
+        })
+        const textlayer = new deck.TextLayer({
+            data: categoryText,
+            getPosition: d => [d.x, d.y],
+            getText: d => d.category,
+            getColor: [0, 0, 0],
+            getSize: 15
+        })
+        umapGL.setProps({
+            layers: [nodelayer, textlayer]
+        });
+    }
+    function toRunUmapView(id,group) {
+        if (umapData == null){
+            $.ajax({
+                url: "getNodeDataGL",
+                type: "GET",
+                dataType: "json",
+                async: true,
+                data: {id: id},
+                success: function(result) {
+                    umapData = result;
+                    redraw("updateLabel",umapData,clusterValue,umapGL,group);
+                }
+            });
+        }else {
+            redraw("updateLabel",umapData,clusterValue,umapGL,group);
+        }
+    }
+    /*
+    * 左侧细胞类型注释可视化分析图部分功能结束实现
+    * */
+
+    /*
+    * 基因表达小提琴图
+    * */
+    const div = document.getElementById("geneExpressionViolin");
+    const width = div.offsetWidth;
+    const height = div.offsetHeight;
+    var layout = {
+        height: height,
+        width: width,
+        showlegend: false,
+        legend: {
+            y: 0.5,
+            font: {
+                family: 'Arial, sans-serif',
+                size: 10
+            },
+            itemclick: 'toggleothers',
+            itemsizing: 'constant'
+        },
+        margin: {
+            l: 40,
+            r: 40,
+            b: 100,
+            t: 5,
+            pad: 2
+        },
+        size:20
+    };
+    var config = {
+        displaylogo: false,
+        doubleClickDelay: 500,
+        responsive: true,
+        toImageButtonOptions: {
+            format: 'svg', // one of png, svg, jpeg, webp
+            filename: 'qc'
+        }
+    };
+    function geneExpressionViolin(cellData,currentGeneData,group) {
+        var groupName = cellData.map(item => item[group]);
+        var uniqueGroupName = [...new Set(groupName)];
+        const styles = [];
+        for (const i in uniqueGroupName){
+            const target = uniqueGroupName[i];
+            const color = '';
+            styles.push({
+                target,
+                value: {
+                    line: { color: `rgb(${colorMap.get(target).join(',')})` }
+                }
+            });
+        }
+        var data = [{
+            type: 'violin',
+            x: groupName,
+            y: currentGeneData.data,
+            points: 'none',
+            showlegend: false,
+            box: {
+                visible: true
+            },
+            line: {
+                color: 'green',
+            },
+            meanline: {
+                visible: true
+            },
+            transforms: [{
+                type: 'groupby',
+                groups: groupName,
+                styles: styles
+            }]
+        }]
+        Plotly.newPlot("geneExpressionViolin", data, layout, config);
+    }
+    /*
+    * 基因表达小提琴图结束
+    * */
+
+    /*
+    * 基因-转录因子网络图
+    * */
+    function createCircularLayout(nodes, centerNodeId = "0") {// 处理节点大小和创建环形布局
+        // 找到中心节点
+        const centerNode = nodes.find(node => node.id === centerNodeId);
+        const otherNodes = nodes.filter(node => node.id !== centerNodeId);
+        // 将 symbolSize 转换为数字并排序（从大到小）
+        otherNodes.forEach(node => {
+            node.symbolSize = Math.log(parseFloat(node.symbolSize) + 1) * 10;
+            node.label = {
+                show: node.symbolSize > 1 // 根据调整后的大小设置标签显示条件
+            };
+        });
+        // 按处理后的 symbolSize 排序
+        otherNodes.sort((a, b) => b.symbolSize - a.symbolSize);
+        // 设置中心节点位置和大小
+        centerNode.x = 0;
+        centerNode.y = 0;
+        centerNode.symbolSize = 10; // 给中心节点固定大小
+        centerNode.fixed = true; // 固定中心节点
+        // 计算环形布局
+        const baseRadius = 150;
+        const totalNodes = otherNodes.length;
+        otherNodes.forEach((node, index) => {
+            // 计算角度（从顶部开始，逆时针排列）
+            const angle = (index / totalNodes) * 2 * Math.PI - Math.PI / 2;
+            // 根据节点大小调整半径（大节点在外圈）
+            const radius = baseRadius + (node.symbolSize * 1.5);
+            // 设置节点位置
+            node.x = radius * Math.cos(angle);
+            node.y = radius * Math.sin(angle);
+            node.fixed = true; // 固定所有节点位置
+        });
+        return [centerNode, ...otherNodes];
+    }
+    function geneTfNetwork(id, gene) {
+        if (selectedTechnology["sample1"] == "scATAC-seq" || selectedTechnology["sample1"] == "snATAC-seq" || selectedTechnology["sample1"] == "sci-ATAC-seq" || selectedTechnology["sample1"] == "sciMAP-ATAC") {
+            $("#geneTfNetwork").hide();
+            $("#geneTfNetworkTip").show();
+        }else {
+            $("#geneTfNetworkTip").hide();
+            $("#geneTfNetwork").show();
+            const chartDom = document.getElementById("geneTfNetwork");
+            const myChart = echarts.init(chartDom, null, {renderer: 'svg'});
+            myChart.showLoading();
+            $.ajax({
+                url: "geneTfNetwork",
+                type: "GET",
+                dataType: "json",
+                async: true,
+                data: {id: id, gene: gene},
+                success: function(res) {
+                    const graph = res
+                    graph.nodes = createCircularLayout(graph.nodes, "0");
+                    const option = {
+                        title: {
+                            text: '',
+                            top: 'bottom',
+                            left: 'right'
+                        },
+                        toolbox : {
+                            feature: {
+                                brush: {
+                                    type: ['rect', 'polygon', 'clear']
+                                },
+                                saveAsImage: {title: "save"}
+                            }
+                        },
+                        tooltip: {
+                            formatter: function(params) {
+                                if (params.dataType === 'node') {
+                                    return `${params.data.name}<br/>Importance: ${params.data.value || params.data.symbolSize}`;
+                                }else if (params.dataType === 'edge') {
+                                    // 创建节点ID到名称的映射
+                                    const nodeMap = {};
+                                    graph.nodes.forEach(node => {
+                                        nodeMap[node.id] = node.name;
+                                    });
+                                    return `${nodeMap[params.data.source] || params.data.source} → ${nodeMap[params.data.target] || params.data.target}`;
+                                }
+                            }
+                        },
+                        legend: {
+                            left: 'right',
+                            top: 'bottom',
+                            data: graph.categories.map(function (a) {
+                                return a.name;
+                            })
+                        },
+                        series: [
+                            {
+                                name: 'TF-Gene Network',
+                                type: 'graph',
+                                layout: 'none', // 使用自定义布局，不使用力导向
+                                data: graph.nodes,
+                                links: graph.links,
+                                categories: graph.categories,
+                                roam: true,
+                                focusNodeAdjacency: true,
+                                label: {
+                                    show: true,
+                                    position: 'right',
+                                    formatter: '{b}',
+                                    fontSize: 10
+                                },
+                                lineStyle: {
+                                    color: 'source',
+                                    curveness: 0.1,
+                                    opacity: 0.6
+                                },
+                                emphasis: {
+                                    focus: 'adjacency',
+                                    lineStyle: {
+                                        width: 2
+                                    }
+                                },
+                                itemStyle: {
+                                    borderColor: '#fff',
+                                    borderWidth: 1
+                                }
+                            }
+                        ]
+                    };
+                    myChart.hideLoading();
+                    myChart.setOption(option);
+                }
+            });
+        }
+    }
+    /*
+    * 基因-转录因子网络图结束
+    * */
+
+    function toShowGeneExp() {
+        if (selectedSamples["sample1"]!=""){
+            console.log("Select Gene:"+currentGeneName+":"+selectedSamples["sample1"])
+            umapData = null;
+            $("#prompt").html('<div class="hr-text text-green">The expression analysis of gene &nbsp;<strong id="id" style="font-weight: bold;color: crimson;">'+currentGeneName+'</strong> in dataset &nbsp;<strong id="id" style="font-weight: bold;color: crimson;">'+ selectedSamples["sample1"] +'</strong>&nbsp; will be presented below.</div>')
+            $("#currentGene").text(currentGeneName)
+            $("#currentDataset").text(selectedSamples["sample1"])
+            getDegTable(selectedSamples["sample1"], currentGeneName);
+            toRunUmapView(selectedSamples["sample1"], currentGroupType);
+            loadGeneExpression();
+            geneTfNetwork(selectedSamples["sample1"], currentGeneName);
+        }else {
+            $("#prompt").html('<div class="hr-text text-red">Please select a sample for analysis of the gene of interest.</div>')
+            console.log("Select Gene:"+currentGeneName+":"+selectedSamples["sample1"])
+            alert("Please select a sample from the table now and submit it.")
+        }
+    }
+
+    /*
+    * 选择单个基因用于去分析，当页的起始。
+    * */
+    async function init() {
+        try {
+            const geneData = await $.ajax({
+                url: "getGeneByAll",
+                type: "GET",
+                dataType: "json"
+            });
+            const handleGeneChange = async function(geneName) {
+                if (geneName !== "") {
+                    currentGeneName = geneName;
+                    getGeneDescription(geneName);
+                    getGeneForDatas(geneName);
+                }
+            };
+            $('#select-feature').selectize({
+                valueField: 'name',
+                labelField: 'name',
+                searchField: 'name',
+                options: geneData.data,
+                create: false,
+                items: [geneData.data[0].name],
+                onChange: handleGeneChange
+            });
+            await handleGeneChange(geneData.data[0].name);
+        } catch (error) {
+            console.error('Initialization error:', error);
+        }
+    }
+    init();
+
+
+
+</script>
+
+
+</body>
+</html>

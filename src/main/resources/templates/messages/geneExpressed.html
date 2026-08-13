@@ -1,0 +1,1250 @@
+<!doctype html>
+
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+  <style>
+     #select-console-selectized{position: unset !important;}
+     #select-group-selectized{position: unset !important;}
+     .genes-row {
+       display: flex;
+       padding-top: 40px;
+     }
+    .celltype-item {
+      height: 20px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .gene-item {
+      width: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      position: relative;
+    }
+    .gene-symbol {
+      writing-mode: vertical-lr;
+      transform: rotate(180deg);
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .gene-icon {
+      position: absolute;
+      top: -20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transform: scale(0.8);
+      transition: all 0.3s ease;
+      z-index: 10;
+    }
+    .delete-icon {
+      top: -40px;
+    }
+    .gene-item:hover .gene-icon {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .scroll-hint {
+      text-align: center;
+      color: #6c757d;
+      font-size: 14px;
+      margin-top: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #38c172;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 5px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      opacity: 0;
+      transform: translateX(100px);
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    .notification.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+     .table th {
+       text-transform: none !important;
+     }
+     /**
+     *
+     * 样本Split可视化样式
+     *
+     */
+     #app {
+       display: flex;
+       gap: 20px;
+     }
+     #control-panel {
+       flex: 0 0 300px;
+       background: white;
+       padding: 20px;
+       border-radius: 8px;
+       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+       max-height: calc(100vh - 150px);
+       overflow-y: auto;
+     }
+     #visualization-container {
+       flex: 1;
+       min-height: 600px;
+       background: white;
+       border-radius: 8px;
+       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+       overflow: hidden;
+       position: relative;
+     }
+     #legend-body {
+       height: 0%;
+       padding:15px;
+     }
+     #map {
+       width: 100%;
+       height: 100%;
+     }
+     .control-group {
+       margin-bottom: 20px;
+     }
+     .control-group:last-child {
+       margin-bottom: 0;
+     }
+     label {
+       display: block;
+       margin-bottom: 8px;
+       font-weight: bold;
+       color: #333;
+       font-size: 14px;
+     }
+     .legend-item {
+       display: flex;
+       align-items: center;
+       margin-bottom: 6px;
+       font-size: 12px;
+     }
+     .legend-color {
+       width: 15px;
+       height: 15px;
+       margin-right: 8px;
+       border-radius: 3px;
+       flex-shrink: 0;
+     }
+     .info-panel {
+       position: absolute;
+       bottom: 15px;
+       right: 15px;
+       padding: 15px 15px;
+       border-radius: 5px;
+       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+       z-index: 1000;
+       font-size: 12px;
+     }
+     .button-group {
+       display: flex;
+       gap: 5px;
+       margin-top: 8px;
+     }
+     .button-group button {
+       flex: 1;
+     }
+     .group-select {
+       margin-bottom: 10px;
+     }
+     .scroll-container {
+       overflow: auto;
+       max-height: 400px;
+     }
+     .split-view-label {
+       position: absolute;
+       background: rgba(255, 255, 255, 0.95);
+       padding: 6px 12px;
+       border-radius: 6px;
+       font-size: 13px;
+       font-weight: bold;
+       border: 2px solid #e0e0e0;
+       pointer-events: none;
+       z-index: 100;
+       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+       white-space: nowrap;
+     }
+
+     @media (max-width: 1200px) {
+       .container {
+         max-width: 100%;
+         padding: 0 15px;
+       }
+       #app {
+         flex-direction: column;
+         height: auto;
+         min-height: 800px; /* 确保整体容器有足够高度 */
+       }
+       #control-panel {
+         flex: none;
+         max-height: 300px;
+         height: auto;
+       }
+       #visualization-container {
+         flex: 1;
+         min-height: 500px;
+         height: 500px; /* 固定高度确保deckgl显示 */
+         position: relative;
+       }
+       #map {
+         position: absolute;
+         top: 0;
+         left: 0;
+         right: 0;
+         bottom: 0;
+       }
+     }
+     .hr-text{text-transform: none;}
+  </style>
+  <body >
+
+    <div class="page">
+      <!-- Navbar -->
+      <header th:replace="inc/inc :: header"></header>
+
+      <div class="page-wrapper">
+        <!-- Page body -->
+        <div class="page-body">
+          <div class="container-xl">
+            <!--选择样本信息table-->
+            <div class="card card-stacked">
+              <div class="ribbon ribbon-top bg-blue">
+                <svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-device-desktop-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11.5 16h-7.5a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v6.5" /><path d="M7 20h4" /><path d="M9 16v4" /><path d="M18 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M20.2 20.2l1.8 1.8" /></svg>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <h3 class="card-title">Comprehensive Dataset Metadata Analysis</h3>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-12">
+                    <table class="table table-nowrap display compact" id="tab1">
+                      <tbody class="table-tbody">
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-12" style="text-align: center">
+                    <button class="btn btn-outline-success" id="submit" onclick="toShowGeneExp()">Submit</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!--加载成功与否信息-->
+            <div class="row">
+              <div class="col-md-12" id="prompt">
+              </div>
+            </div>
+
+            <!--样本可视化分割展示Split.by-->
+            <div id="app">
+              <div id="control-panel">
+
+                <!-- 样本分组选择 -->
+                <div class="control-group">
+                  <label for="sampleGroupSelect" class="form-label">Sample Group Type:</label>
+                  <select id="sampleGroupSelect" class="group-select form-select">
+                    <option value="origident">Orig.ident</option>
+                    <option value="sex">Sex</option>
+                    <option value="age">Age</option>
+                    <option value="times">Time</option>
+                    <option value="tissue">Tissue</option>
+                    <option value="treatment">Treatment</option>
+                  </select>
+
+                  <label for="sampleSelect" class="form-label">Sample Selection:</label>
+                  <div class="scroll-container">
+                    <select id="sampleSelect" class="form-select" multiple size="8">
+                      <option value="all" selected>All</option>
+                    </select>
+                  </div>
+                  <div class="button-group">
+                    <button id="selectAllSamples" class="btn btn-sm btn-outline-success" type="button">All</button>
+                    <button id="clearSamples" class="btn btn-sm btn-outline-warning" type="button">Clean</button>
+                  </div>
+                </div>
+
+                <!-- 聚类分组选择 -->
+                <div class="control-group">
+                  <label for="clusterGroupSelect" class="form-label">Cluster Group Type:</label>
+                  <select id="clusterGroupSelect" class="group-select form-select">
+                    <option value="celltype">Cell Type</option>
+                    <option value="clusters">Clusters</option>
+                  </select>
+
+                  <label for="clusterSelect" class="form-label">Cluster Selection:</label>
+                  <div class="scroll-container">
+                    <select id="clusterSelect" class="form-select" multiple size="8">
+                      <option value="all" selected>All</option>
+                    </select>
+                  </div>
+                  <div class="button-group">
+                    <button id="selectAllClusters" class="btn btn-sm btn-outline-success" type="button">All</button>
+                    <button id="clearClusters" class="btn btn-sm btn-outline-warning" type="button">Clean</button>
+                  </div>
+                </div>
+
+                <div class="control-group">
+                  <label class="form-label">View Mode:</label>
+                  <label class="form-check form-check-inline">
+                    <input type="radio" id="combined" class="form-check-input" name="viewMode" value="combined" checked>
+                    <span for="combined" class="form-check-label" style="display:inline; font-weight:normal">Merged view</span>
+                  </label>
+                  <label class="form-check form-check-inline">
+                    <input type="radio" id="split" class="form-check-input" name="viewMode" value="split">
+                    <span for="split" class="form-check-label" style="display:inline; font-weight:normal">Split view</span>
+                  </label>
+                </div>
+
+              </div>
+
+              <div id="visualization-container">
+                <div id="legend-body">
+                  <label class="form-label">Clustering legend</label>
+                  <div id="clusterLegend"></div>
+                </div>
+                <div id="map"></div>
+                <div class="info-panel">
+                  <div><strong>Display Summary:</strong></div>
+                  <span class="badge bg-azure-lt text-azure-lt-fg" id="statsInfo"></span>
+                </div>
+              </div>
+            </div>
+
+            <!--基因表达可视化-->
+            <div class="card mt-3" id="resultDiv" style="box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);display: none;">
+              <div class="card-body">
+                <div class="row mb-3">
+                  <label class="form-label">Gene Expression Visualization</label>
+                  <div class="col-md-4">
+                    <select id="select-feature" multiple placeholder="Input placeholder"></select>
+                  </div>
+                  <div class="col-md-4">
+                    <button class="btn btn-outline-info" id="button-setvalue">
+                      Default Genes
+                    </button>
+                    <button class="btn btn-outline-danger ms-3" id="button-clear">
+                      Clear Selection
+                    </button>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-3">
+                    <div style="width: 20px;display: flex;flex-direction: column;align-items: center;justify-content: flex-end;position: relative;">
+                      <div style="writing-mode: vertical-lr;transform: rotate(180deg);text-align: center;transition: all 0.3s ease;cursor: pointer;">Cell Count</div>
+                    </div>
+                  </div>
+                  <div class="col-md-9">
+                    <div class="gene-display-container">
+                      <div class="genes-row" id="genesContainer">
+                        <!-- 基因符号将通过JavaScript动态添加 -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-3">
+                    <div class="celltype-row" id="celltypeContainer">
+                      <!-- 细胞类型标签将通过JavaScript动态添加 -->
+                    </div>
+                  </div>
+                  <div class="col-md-9">
+                    <div id="main-chart" style="width:10px;height:10px;float:left;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!--模态框代码，用于展示基因和差异基因信息-->
+        <div class="notification" id="notification"></div>
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+          <div class="toast fade" id="toast-degCelltype" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="false">
+            <div class="toast-header">
+              <span>
+                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-dna-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 3v1c-.01 3.352 -1.68 6.023 -5.008 8.014c-3.328 1.99 3.336 -2 .008 -.014c-3.328 1.99 -5 4.662 -5.008 8.014v1" /><path d="M17 21.014v-1c-.01 -3.352 -1.68 -6.023 -5.008 -8.014c-3.328 -1.99 3.336 2 .008 .014c-3.328 -1.991 -5 -4.662 -5.008 -8.014v-1" /><path d="M7 4h10" /><path d="M7 20h10" /><path d="M8 8h8" /><path d="M8 16h8" /></svg>
+              </span>
+              <strong class="me-auto">Marker Genes</strong>
+              <small onclick="addDotPlot()" style="color: royalblue;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-photo-plus"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 8h.01" /><path d="M12.5 21h-6.5a3 3 0 0 1 -3 -3v-12a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v6.5" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l4 4" /><path d="M14 14l1 -1c.67 -.644 1.45 -.824 2.182 -.54" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>
+                Add to Dot Plot
+              </small>
+              <button type="button" class="ms-2 btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+              <div class="table-responsive">
+                <table class="table" id="degTable">
+                  <thead>
+                  <tr>
+                    <th>Gene</th>
+<!--                    <th>Celltype</th>-->
+                    <th>Pvalue</th>
+                    <th>AvgLog2FC</th>
+                    <th>PvalueAdj</th>
+                    <th>PCT1</th>
+                    <th>PCT2</th>
+                  </tr>
+                  </thead>
+                  <tbody class="table-tbody">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer th:replace="inc/inc :: geneDescription"></footer>
+        <footer th:replace="inc/inc :: footer"></footer>
+      </div>
+    </div>
+    <div th:replace="inc/plugins :: script"></div>
+
+    <script th:src="@{/js/geneExpressed.js}"></script>
+    <script th:src="@{/js/analysis.js}"></script>
+<!--    <script src="https://unpkg.com/deck.gl@^9.0.0/dist.min.js"></script>-->
+    <script th:src="@{/js/deckgl9.0.0.dist.min.js}"></script>
+    <script th:src="@{/js/d3.v7.min.js}"></script>
+
+    <script th:inline="none">
+      /*
+      * 本页功能执行记录：第一部分加载样本信息表，第二部分加载样本split内容（初始化设置的默认值Stroke_001样本，在构造器中默认设置的），第三部分加载基因表达点图（初始化在最后通过tab1.on的datatable功能设置默认选择第一行加载第一个样本然后执行toShowGeneExp函数）
+      * 二次选择样本都是通过在datatable中选中样本，通过点击submit按钮重新加载的，（submit点击后会执行toShowGeneExp函数重新加载点图，split图的构造器中设置了获取点击事件去重新加载split图）
+      * */
+      const tab1 = getSampleAna("tab1")
+      const selectedSamples = {'sample1':''};  // 使用工厂函数为每个表格创建处理器
+      createTableHandlers(tab1, selectedSamples, 'sample1');
+
+      /*
+      * 样本分割可视化代码部分Split.by功能
+      * */
+      // ================================
+      // 配置区域
+      // ================================
+      const CONFIG = {
+        // 颜色配置 - 使用Seurat风格的配色
+        CLUSTER_COLORS: [
+          [31,120,180],[51,160,44],[227,26,28],[255,127,0],[106,61,154],[177,89,40],[166,206,227],[178,223,138],[251,154,153],[253,191,111],[202,178,214],[255,255,153],[141,211,199],
+          [255,255,179],[190,186,218],[251,128,114],[128,177,211],[253,180,98],[179,222,105],[252,205,229],[217,217,217],[188,128,189],[204,235,197],[255,237,111]
+        ],
+
+        // 可视化参数
+        VISUALIZATION: {
+          pointRadius: 20,
+          pointOpacity: 1,
+          pointMinPixels: 1,
+          pointMaxPixels: 4,
+          initialZoom: 4,
+          initialSplitZoom: 2,
+          // 分割视图参数
+          splitView: {
+            spacing: 30, // 样本之间的间距
+            scale: 1   // 每个样本的缩放比例
+          }
+        }
+      };
+      function loadDataFromURL(id) {
+        return new Promise((resolve, reject) => {
+          $.ajax({
+            url: "getNodeDataGLsplit",
+            type: "GET",
+            dataType: "json",
+            data: {id: id},
+            success: function(result) {
+              resolve(result.data);
+            },
+            error: function(xhr, status, error) {
+              console.error('failed load data:', error);
+              reject(error);
+            }
+          });
+        });
+      }
+      // ================================
+      // 主应用类
+      // ================================
+      class SingleCellVisualization {
+        constructor(options = {}) {
+          console.log("-------------")
+          this.config = { ...CONFIG, ...options };
+          this.data = [];
+          this.deckgl = null;
+          this.filteredData = [];
+          this.containerWidth = 0;
+          this.containerHeight = 0;
+          this.currentViewMode = 'combined';
+          this.currentSplitGroups = [];
+          this.labelElements = [];
+          this.currentDatasetId = null; // 默认数据集
+          this.currentSampleGroup = 'origident';
+          this.currentClusterGroup = 'celltype';
+          // this.init();
+        }
+        /**
+         * 初始化应用
+         */
+        async init() {
+          await this.loadData(this.currentDatasetId);
+          this.initializeDeckGL();
+          this.initializeControls();
+          this.setupEventListeners();
+          this.updateVisualization();
+          this.createLegend();
+          // 监听窗口大小变化
+          window.addEventListener('resize', () => this.handleResize());
+        };
+        async start() {
+          await this.init();
+        }
+
+        /**
+         * 加载数据
+         */
+        async loadData(id) {
+          this.currentDatasetId = id; // 保存当前数据集ID
+          this.data = await loadDataFromURL(id);
+        }
+        /**
+         * 重新加载数据
+         */
+        async reloadData(id) {
+          try {
+            // 显示加载状态
+            this.showLoadingState();
+            // 加载新数据
+            await this.loadData(id);
+            // 更新控制面板选项
+            this.updateSampleOptions();
+            this.updateClusterOptions();
+            // 重置选择状态
+            this.resetSelections();
+            // 更新可视化
+            this.updateVisualization();
+            this.createLegend();
+            // 更新统计信息
+            this.updateStats();
+          } catch (error) {
+            console.error('Failed to reload data:', error);
+            this.showError('Failed to load dataset: ' + error);
+          }
+        }
+        /**
+         * 显示加载状态
+         */
+        showLoadingState() {
+          const statsElement = document.getElementById('statsInfo');
+          if (statsElement) {
+            statsElement.innerHTML = 'Loading data...';
+            statsElement.style.color = '#ff6b00';
+          }
+        }
+        /**
+         * 显示错误信息
+         */
+        showError(message) {
+          const statsElement = document.getElementById('statsInfo');
+          if (statsElement) {
+            statsElement.innerHTML = message;
+            statsElement.style.color = '#ff0000';
+          }
+        }
+        /**
+         * 重置选择状态
+         */
+        resetSelections() {
+          // 重置样本选择
+          const sampleSelect = document.getElementById('sampleSelect');
+          Array.from(sampleSelect.options).forEach(option => {
+            option.selected = option.value === 'all';
+          });
+
+          // 重置聚类选择
+          const clusterSelect = document.getElementById('clusterSelect');
+          Array.from(clusterSelect.options).forEach(option => {
+            option.selected = option.value === 'all';
+          });
+        }
+
+        /**
+         * 初始化DeckGL
+         */
+        initializeDeckGL() {
+          const container = document.getElementById('visualization-container');
+          this.containerWidth = container.clientWidth;
+          this.containerHeight = container.clientHeight;
+
+          // 确保容器有正确尺寸
+          this.ensureContainerSize();
+          this.deckgl = new deck.DeckGL({
+            container: 'map',
+            initialViewState: {
+              longitude: 0,
+              latitude: 0,
+              zoom: this.config.VISUALIZATION.initialZoom,
+              pitch: 0,
+              bearing: 0,
+              minZoom: 3,
+              maxZoom: 6
+            },
+            controller: {
+              inertia: true,
+              scrollZoom: {
+                speed: 0.001,
+                smooth: true
+              }
+            },
+            layers: [],
+            getTooltip: this.getTooltipContent.bind(this),
+            onLoad: () => {
+              console.log('DeckGL loaded, forcing initial redraw');
+              // 加载完成后强制重绘
+              this.forceInitialRedraw();
+            }
+          });
+          // 初始重绘
+          this.forceInitialRedraw();
+        }
+
+        /**
+         * 确保容器尺寸
+         */
+        ensureContainerSize() {
+          const container = document.getElementById('visualization-container');
+          const map = document.getElementById('map');
+          if (container.clientHeight === 0) {
+            container.style.height = '500px';
+          }
+          if (map.clientHeight === 0) {
+            map.style.height = '100%';
+          }
+        }
+
+        /**
+         * 初始强制重绘
+         */
+        forceInitialRedraw() {
+          if (!this.deckgl) return;
+          // 使用多重延迟确保覆盖各种情况
+          setTimeout(() => {
+            this.forceRedraw();
+          }, 100);
+          setTimeout(() => {
+            this.forceRedraw();
+          }, 500);
+        }
+
+        /**
+         * 强制重绘
+         */
+        forceRedraw() {
+          if (!this.deckgl) return;
+          try {
+            // 通过设置props触发更新
+            const currentLayers = this.deckgl.props.layers || [];
+            this.deckgl.setProps({
+              layers: [...currentLayers] // 创建新数组引用强制更新
+            });
+          } catch (error) {
+            console.warn('Redraw error:', error);
+          }
+        }
+
+
+        /**
+         * 工具提示内容
+         */
+        getTooltipContent({ object }) {
+          if (!object) return null;
+          return {
+            html: `<div style="padding: 8px; min-width: 250px;">
+                    <div><strong>Sample:</strong> ${object.origident}</div>
+                    <div><strong>Cell type:</strong> ${object.celltype}</div>
+                    <div><strong>Cluster:</strong> ${object.clusters}</div>
+                    <div><strong>Tissue:</strong> ${object.tissue}</div>
+                    <div><strong>Treatment:</strong> ${object.treatment}</div>
+                    <div><strong>Sex:</strong> ${object.sex}</div>
+                    <div><strong>Age:</strong> ${object.age}</div>
+                    <div><strong>Time:</strong> ${object.times}</div>
+                    <div><strong>UMAP1:</strong> ${object.x.toFixed(3)}</div>
+                    <div><strong>UMAP2:</strong> ${object.y.toFixed(3)}</div>
+                   </div>`,
+            style: {
+              backgroundColor: 'white',
+              color: '#333',
+              fontSize: '12px',
+              borderRadius: '4px',
+              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+            }
+          };
+        }
+
+        /**
+         * 初始化控制面板
+         */
+        initializeControls() {
+          this.updateSampleOptions();
+          this.updateClusterOptions();
+        }
+
+        /**
+         * 更新样本选项
+         */
+        updateSampleOptions() {
+          const groupField = this.currentSampleGroup;
+          const samples = [...new Set(this.data.map(d => d[groupField]))].sort();
+          this.populateSelect('sampleSelect', samples, `All ${this.getGroupLabel(groupField)}`);
+        }
+
+        /**
+         * 更新聚类选项
+         */
+        updateClusterOptions() {
+          const groupField = this.currentClusterGroup;
+          const clusters = [...new Set(this.data.map(d => d[groupField]))].sort();
+          this.populateSelect('clusterSelect', clusters, `All ${this.getGroupLabel(groupField)}`);
+        }
+
+        /**
+         * 获取分组标签
+         */
+        getGroupLabel(field) {
+          const labels = {
+            'origident': 'Orig.ident',
+            'sex': 'Sex',
+            'age': 'Age',
+            'times': 'Time',
+            'tissue': 'Tissue',
+            'treatment': 'Treatment',
+            'celltype': 'Cell Type',
+            'clusters': 'Clusters'
+          };
+          return labels[field] || field;
+        }
+
+        /**
+         * 填充下拉选择框
+         */
+        populateSelect(selectId, items, allText) {
+          const select = document.getElementById(selectId);
+          select.innerHTML = `<option value="all" selected>${allText}</option>`;
+          items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            option.textContent = item;
+            select.appendChild(option);
+          });
+        }
+
+        /**
+         * 设置事件监听器
+         */
+        setupEventListeners() {
+          // 分组选择事件
+          document.getElementById('sampleGroupSelect').addEventListener('change', (e) => {
+            this.currentSampleGroup = e.target.value;
+            this.updateSampleOptions();
+            this.updateVisualization();
+            this.createLegend();
+          });
+
+          document.getElementById('clusterGroupSelect').addEventListener('change', (e) => {
+            this.currentClusterGroup = e.target.value;
+            this.updateClusterOptions();
+            this.updateVisualization();
+            this.createLegend();
+          });
+
+          // 控制面板事件
+          document.getElementById('sampleSelect').addEventListener('change', () => this.updateVisualization());
+          document.getElementById('clusterSelect').addEventListener('change', () => this.updateVisualization());
+          document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+            radio.addEventListener('change', () => this.updateVisualization());
+          });
+
+          // 按钮事件
+          document.getElementById('selectAllSamples').addEventListener('click', () => this.selectAll('sampleSelect'));
+          document.getElementById('clearSamples').addEventListener('click', () => this.clearSelection('sampleSelect'));
+          document.getElementById('selectAllClusters').addEventListener('click', () => this.selectAll('clusterSelect'));
+          document.getElementById('clearClusters').addEventListener('click', () => this.clearSelection('clusterSelect'));
+
+          // 选中样本后点击提交按钮重新加载数据重绘图形。
+          if (document.getElementById('submit')) {
+            document.getElementById('submit').addEventListener('click', () => {
+              this.reloadData(selectedSamples.sample1);
+            });
+          }
+        }
+
+        /**
+         * 处理窗口大小变化
+         */
+        handleResize() {
+          const container = document.getElementById('visualization-container');
+          const newWidth = container.clientWidth;
+          const newHeight = container.clientHeight;
+          if (Math.abs(newWidth - this.containerWidth) > 50 || Math.abs(newHeight - this.containerHeight) > 50) {
+            this.containerWidth = newWidth;
+            this.containerHeight = newHeight;
+            // 强制更新deckgl尺寸
+            if (this.deckgl) {
+              this.deckgl.setProps({
+                width: newWidth,
+                height: newHeight
+              });
+            }
+            this.updateVisualization();
+            // 调整后重绘
+            setTimeout(() => this.forceRedraw(), 200);
+          }
+        }
+
+        /**
+         * 全选
+         */
+        selectAll(selectId) {
+          const select = document.getElementById(selectId);
+          Array.from(select.options).forEach(option => option.selected = true);
+          this.updateVisualization();
+        }
+
+        /**
+         * 清空选择
+         */
+        clearSelection(selectId) {
+          const select = document.getElementById(selectId);
+          Array.from(select.options).forEach(option => {
+            option.selected = option.value === 'all';
+          });
+          this.updateVisualization();
+        }
+
+        /**
+         * 过滤数据
+         */
+        filterData() {
+          const selectedSamples = this.getSelectedValues('sampleSelect');
+          const selectedClusters = this.getSelectedValues('clusterSelect');
+          let filtered = this.data;
+
+          // 根据当前分组方式过滤样本
+          if (!selectedSamples.includes('all') && selectedSamples.length > 0) {
+            filtered = filtered.filter(d => selectedSamples.includes(d[this.currentSampleGroup]));
+          }
+
+          // 根据当前分组方式过滤聚类
+          if (!selectedClusters.includes('all') && selectedClusters.length > 0) {
+            filtered = filtered.filter(d => selectedClusters.includes(d[this.currentClusterGroup].toString()));
+          }
+          return filtered;
+        }
+
+        /**
+         * 获取选中的值
+         */
+        getSelectedValues(selectId) {
+          return Array.from(document.getElementById(selectId).selectedOptions)
+                  .map(opt => opt.value);
+        }
+
+        /**
+         * 更新可视化
+         */
+        updateVisualization() {
+          this.filteredData = this.filterData();
+          const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
+          this.currentViewMode = viewMode;
+          if (viewMode === 'combined') {
+            this.showCombinedView();
+          } else {
+            this.showSplitView();
+          }
+          this.updateStats();
+          // 添加延迟重绘确保渲染完成
+          setTimeout(() => {
+            this.forceRedraw();
+          }, 50);
+        }
+
+        /**
+         * 显示合并视图
+         */
+        showCombinedView() {
+          // 清理标签
+          this.cleanupLabels();
+          const layers = this.createCombinedViewLayers();
+          this.deckgl.setProps({
+            layers,
+            initialViewState: {
+              longitude: 0,
+              latitude: 0,
+              zoom: this.config.VISUALIZATION.initialZoom,
+              pitch: 0,
+              bearing: 0
+            }
+          });
+          // 添加重绘
+          setTimeout(() => this.forceRedraw(), 100);
+        }
+
+        /**
+         * 显示分割视图
+         */
+        showSplitView() {
+          const groupField = this.currentSampleGroup;
+          const groups = [...new Set(this.filteredData.map(d => d[groupField]))].sort();
+          if (groups.length === 0) {
+            console.log('sample data not found');
+            return;
+          }
+
+          this.currentSplitGroups = groups;
+
+          // 创建分割视图图层和标签
+          const layers = this.createSplitViewLayers(groups);
+          this.createSplitViewLabels(groups);
+          this.deckgl.setProps({
+            layers,
+            initialViewState: {
+              longitude: 0,
+              latitude: 0,
+              zoom: this.config.VISUALIZATION.initialSplitZoom,
+              pitch: 0,
+              bearing: 0
+            }
+          });
+
+          // 添加重绘
+          setTimeout(() => this.forceRedraw(), 100);
+        }
+
+        /**
+         * 创建合并视图图层
+         */
+        createCombinedViewLayers() {
+          if (this.filteredData.length === 0) return [];
+
+          return [new deck.ScatterplotLayer({
+            id: 'cells-combined',
+            data: this.filteredData,
+            getPosition: d => [d.x, d.y, 0],
+            getFillColor: d => this.getColorForGroup(d[this.currentClusterGroup]),
+            getRadius: this.config.VISUALIZATION.pointRadius,
+            opacity: this.config.VISUALIZATION.pointOpacity,
+            pickable: true,
+            radiusMinPixels: this.config.VISUALIZATION.pointMinPixels,
+            radiusMaxPixels: this.config.VISUALIZATION.pointMaxPixels,
+          })];
+        }
+
+        /**
+         * 创建分割视图图层
+         */
+        createSplitViewLayers(groups) {
+          if (this.filteredData.length === 0) return [];
+
+          const layers = [];
+          const spacing = this.config.VISUALIZATION.splitView.spacing;
+          const scale = this.config.VISUALIZATION.splitView.scale;
+
+          // 计算网格布局
+          const cols = Math.ceil(Math.sqrt(groups.length));
+          const rows = Math.ceil(groups.length / cols);
+
+          groups.forEach((group, index) => {
+            const groupData = this.filteredData.filter(d => d[this.currentSampleGroup] === group);
+
+            if (groupData.length === 0) return;
+
+            // 计算当前组在网格中的位置
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+
+            // 计算偏移量 - 让所有样本均匀分布
+            const offsetX = (col - (cols - 1) / 2) * spacing;
+            const offsetY = ((rows - 1) / 2 - row) * spacing;
+
+            layers.push(new deck.ScatterplotLayer({
+              id: `cells-split-${group}`,
+              data: groupData,
+              getPosition: d => [
+                d.x * scale + offsetX,
+                d.y * scale + offsetY,
+                0
+              ],
+              getFillColor: d => this.getColorForGroup(d[this.currentClusterGroup]),
+              getRadius: this.config.VISUALIZATION.pointRadius,
+              opacity: this.config.VISUALIZATION.pointOpacity,
+              pickable: true,
+              radiusMinPixels: this.config.VISUALIZATION.pointMinPixels,
+              radiusMaxPixels: this.config.VISUALIZATION.pointMaxPixels,
+            }));
+          });
+          return layers;
+        }
+
+        /**
+         * 创建分割视图标签
+         */
+        createSplitViewLabels(groups) {
+          // 先清理现有标签
+          this.cleanupLabels();
+
+          const cols = Math.ceil(Math.sqrt(groups.length));
+          const rows = Math.ceil(groups.length / cols);
+
+          // 创建table容器
+          const tableContainer = document.createElement('div');
+          tableContainer.style.marginTop = '10px';
+          tableContainer.style.fontSize = '10px';
+
+          // 添加标题
+          const title = document.createElement('strong');
+          title.textContent = 'Plot Layout (Rows × Columns):';
+          title.style.fontSize = '12px';
+          tableContainer.appendChild(title);
+
+          // 创建table
+          const table = document.createElement('table');
+          table.style.width = '100%';
+          table.style.borderCollapse = 'collapse';
+          table.style.fontSize = '10px';
+
+          // 创建表格行
+          for (let row = 0; row < rows; row++) {
+            const tr = document.createElement('tr');
+
+            for (let col = 0; col < cols; col++) {
+              const td = document.createElement('td');
+              td.style.padding = '4px 5px';
+              td.style.border = '1px solid #e0e0e0';
+              td.style.textAlign = 'center';
+
+              const index = row * cols + col;
+              if (index < groups.length) {
+                const group = groups[index];
+                td.textContent = group;
+                td.title = `Position: Row ${row + 1}, Column ${col + 1}`;
+              } else {
+                td.style.backgroundColor = '#f9f9f9'; // 空单元格
+              }
+              tr.appendChild(td);
+            }
+            table.appendChild(tr);
+          }
+          tableContainer.appendChild(table);
+          const infoPanel = document.querySelector('.info-panel');// 将table容器添加到info-panel中
+          // 移除可能已存在的容器
+          const existingContainer = infoPanel.querySelector('.split-view-labels');
+          if (existingContainer) {
+            existingContainer.remove();
+          }
+          tableContainer.className = 'split-view-labels';
+          infoPanel.appendChild(tableContainer);
+          // 保存标签元素用于后续清理
+          this.labelElements.push(tableContainer);
+        }
+        /**
+         * 清理标签
+         */
+        cleanupLabels() {
+          this.labelElements.forEach(label => {
+            if (label.parentNode) {
+              label.parentNode.removeChild(label);
+            }
+          });
+          this.labelElements = [];
+
+          // 同时清理info-panel中的标签容器
+          const infoPanel = document.querySelector('.info-panel');
+          const existingLabelContainer = infoPanel.querySelector('.split-view-labels');
+          if (existingLabelContainer) {
+            existingLabelContainer.remove();
+          }
+        }
+
+        /**
+         * 根据分组值获取颜色
+         */
+        getColorForGroup(value) {
+          if (value === undefined || value === null) return [128, 128, 128];
+          // 将分组值转换为索引
+          let index;
+          if (typeof value === 'string') {
+            // 对于字符串值，使用字符编码总和计算索引
+            index = value.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+          } else {
+            // 对于数字值，直接使用
+            index = parseInt(value);
+          }
+          return this.config.CLUSTER_COLORS[Math.abs(index) % this.config.CLUSTER_COLORS.length];
+        }
+
+        /**
+         * 更新统计信息
+         */
+        updateStats() {
+          const statsElement = document.getElementById('statsInfo');
+          if (statsElement) {
+            const selectedSamples = this.getSelectedValues('sampleSelect');
+            const selectedClusters = this.getSelectedValues('clusterSelect');
+
+            const sampleCount = selectedSamples.includes('all')
+                    ? new Set(this.data.map(d => d[this.currentSampleGroup])).size
+                    : selectedSamples.length;
+
+            const clusterCount = selectedClusters.includes('all')
+                    ? new Set(this.data.map(d => d[this.currentClusterGroup])).size
+                    : selectedClusters.length;
+
+            statsElement.innerHTML = `
+                        Show: ${this.filteredData.length} cells |
+                        ${sampleCount} ${this.getGroupLabel(this.currentSampleGroup)} |
+                        ${clusterCount} ${this.getGroupLabel(this.currentClusterGroup)}
+                    `;
+          }
+        }
+
+        /**
+         * 创建图例
+         */
+        createLegend() {
+          const legendContainer = document.getElementById('clusterLegend');
+          const groups = [...new Set(this.data.map(d => d[this.currentClusterGroup]))].sort();
+
+          legendContainer.innerHTML = groups.map((group, index) => {
+            const color = this.getColorForGroup(group);
+            return `<div class="legend-item">
+                      <div class="legend-color" style="background-color: rgb(${color.join(',')})"></div>
+                      <span>${group}</span>
+                    </div>`;
+          }).join('');
+        }
+
+        /**
+         * 销毁应用
+         */
+        destroy() {
+          this.cleanupLabels();
+          if (this.deckgl) {
+            this.deckgl.finalize();
+          }
+        }
+      }
+      // ================================
+      // 初始化应用
+      // ================================
+
+      let app;
+      document.addEventListener('DOMContentLoaded', () => {
+        app = new SingleCellVisualization();
+        window.SCVisualization = app;
+      });
+
+      // 在页面卸载时清理资源
+      window.addEventListener('beforeunload', () => {
+        if (app) {
+          app.destroy();
+        }
+      });
+      /*
+      * 样本分割可视化代码部分Split.by功能结束
+      * */
+
+      function toShowGeneExp() {
+        if (selectedSamples.sample1 == "") {
+          $("#prompt").html('<div class="hr-text text-red">Please select one sample to feature.</div>')
+        } else {
+          id = selectedSamples.sample1;
+          $("#prompt").html('<div class="hr-text text-green">The gene expression of dataset&nbsp;<strong id="id" style="font-weight: bold;color: crimson;">'+ id +'</strong>will be presented below.</div>')
+          $("#resultDiv").show();
+          init();
+        }
+      }
+      // 初始化函数
+      async function init() {
+        try {
+          // 获取基因列表并初始化选择器
+          const geneData = await $.ajax({
+            url: "getGeneNameBinary",
+            type: "GET",
+            dataType: "json",
+            data: {id: id}
+          });
+          const handleGeneChange = async function(geneNameArr) {
+            if (geneNameArr && geneNameArr.length > 0) {
+              getGeneExpressData(id, geneNameArr);
+            }else {
+              $('.gene-item').remove(); // 因为在输入框中删掉最后一个基因就不去查询了，
+              const chartDom = document.getElementById('main-chart');
+              const myChart = echarts.init(chartDom);
+              myChart.dispose();
+              console.log("geneNameArr is null or no value");
+            }
+          };
+          // 在重新初始化前销毁现有实例,防止重新加载数据后selectize下拉框不更新。
+          const $selectElement = $('#select-feature');
+          const selectizeInstance = $selectElement[0].selectize;
+          if (selectizeInstance) {
+            selectizeInstance.destroy();
+          }
+          await $('#select-feature').selectize({
+            valueField: 'name',
+            labelField: 'name',
+            searchField: 'name',
+            options: geneData.data,
+            create: false,
+            items: [geneData.data[0].name],
+            onChange: handleGeneChange
+          });
+          await handleGeneChange(geneData.data[0].name);
+        } catch (error) {
+          console.error('Initialization error:', error);
+        }
+      }
+      /** 初始化展示基因表达的点图可视化，样本分割的初始化在创建部分设置的默认样本是手动写的”Stroke_001“，
+       * 当选择样本后通过点击事件submit按钮，进一步更新样本split图和点图。
+       * */
+
+      tab1.one('draw', function() {
+        // 确保有数据行存在
+        if (tab1.rows().count() > 0) {
+          // 触发第一行的点击事件
+          $(tab1.row(0).node()).click();
+          var sampleId = tab1.cell(0,1).data();
+          if(app){
+            app.currentDatasetId = sampleId;
+            app.start();
+          }
+          toShowGeneExp();
+        }
+      });
+
+      function addDotPlot() { // 提取页面中的差异表达基因，去重新绘制点图，注意点图的绘制，修改selectize的选中值即可。
+        var firstColumnData = $('#degTable').DataTable().column(0).data().toArray();
+        const singleSelect = $('#select-feature').selectize();
+        const singleSelectize = singleSelect[0].selectize;
+        singleSelectize.setValue(firstColumnData);
+      }
+    </script>
+
+
+  </body>
+</html>

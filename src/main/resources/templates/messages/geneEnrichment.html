@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+  <style>
+    #select-celltype-selectized{position: unset !important;}
+  </style>
+  <body >
+    <div class="page">
+      <!-- Navbar -->
+      <header th:replace="inc/inc :: header"></header>
+
+      <div class="page-wrapper">
+        <!-- Page body -->
+        <div class="page-body">
+          <div class="container-xl">
+            <div class="card card-stacked">
+              <div class="ribbon ribbon-top bg-blue">
+                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-device-desktop-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11.5 16h-7.5a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v6.5" /><path d="M7 20h4" /><path d="M9 16v4" /><path d="M18 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M20.2 20.2l1.8 1.8" /></svg>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="mb-3 col-md-6">
+                    <h3 class="card-title">Gene Set Enrichment Analysis</h3>
+                    <form action="geneEnrichmentView" method="post">
+                      <div class="row">
+                        <div class="mb-3 col-md-12">
+                          <label class="form-label">Gene List</label>
+                          <textarea class="form-control" name="genes" id="genes" cols="5" placeholder="Input gene symbols separated by commas (e.g. TMS4A1, CD79A, IGHM, BANK1)" style="height: 200px;"></textarea>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="mb-3 col-md-6">
+                          <label class="form-label">Threshold</label>
+                          <select id="select-threshold" name="select-threshold" placeholder="Input placeholder">
+                          </select>
+                        </div>
+                        <div class="mb-3 col-md-6">
+                          <div class="form-label">FDR Adjust</div>
+                          <label class="form-check form-switch mt-3">
+                            <input class="form-check-input" id="adjust" name="adjust" type="checkbox" checked />
+                            <span class="form-check-label">On: FDR correction | Off: Raw p-values</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="mb-3 col-md-12">
+                          <button class="btn btn-info" onclick="addGenes()" type="button">Example</button>
+                          <button class="btn btn-success" type="submit">Submit</button>
+                          <button class="btn btn-danger" type="reset">Reset</button>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                  <div class="mb-3 col-md-6">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer th:replace="inc/inc :: footer"></footer>
+      </div>
+    </div>
+    <div th:replace="inc/plugins :: script"></div>
+  </body>
+<script>
+  function toSelect() {
+    const eventHandler = function() {  /!*细胞互作分组下拉列表*!/
+      return function() {
+        param = arguments[0];
+      };
+    };
+    const threshold = [{name:"0.0001"},{name:"0.001"},{name: "0.01"},{name: "0.05"}];
+    const $selectThreshold = $('#select-threshold').selectize({
+      valueField: 'name',
+      labelField: 'name',
+      searchField: 'name',
+      options: threshold,
+      create: false,
+      onChange: eventHandler('onChange')
+    });
+    const control = $selectThreshold[0].selectize;
+    control.setValue(threshold[0].name);
+  }
+  toSelect()
+  function addGenes() {
+    const genes = ["MS4A1", "CD79A", "IGHM", "BANK1", "LINC00926", "CD79B", "HLA-DRA", "HLA-DQA1", "RALGPS2", "HLA-DQB1", "TCL1A", "FAM129C", "HLA-DQA2", "MEF2C", "HLA-DRB5", "FCER2", "HLA-DPA1", "HLA-DPB1", "HVCN1", "AFF3", "CD74", "SWAP70", "IGHD", "IGKC", "FCRL1", "HLA-DMA", "VPREB3", "ADAM28", "CD22", "PLPP5", "BLK", "LTB", "CD19", "EAF2", "FCRLA", "HLA-DMB", "TNFRSF13C", "BCL11A", "IRF8", "SNX2", "GNG7", "SNX29", "CD83", "CD40", "CD37", "HLA-DRB1", "TCF4", "CD24", "PDLIM1", "BLNK", "NCF1", "PAX5", "POU2AF1", "NAPSA", "FCMR", "ADK", "HLA-DOB", "JCHAIN", "RUBCNL", "BIRC3", "IL4R", "SYNGR2", "STX7", "CYB561A3", "CD72", "IGLC2", "COBLL1", "IGKV3-20", "PKIG", "SPIB", "TSPAN13", "BACH2", "FAM30A", "MTSS1", "COL19A1", "MT-ATP8", "CD82", "CD69", "POU2F2", "CDCA7L"];
+    const textarea = document.getElementById("genes");
+    textarea.value += genes.join(",");
+  }
+</script>
+</html>

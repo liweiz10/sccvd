@@ -1,0 +1,141 @@
+<!doctype html>
+
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+<style>
+    .table th {
+        text-transform: none !important;
+    }
+</style>
+<body >
+
+<div class="page">
+    <!-- Navbar -->
+    <header th:replace="inc/inc :: header"></header>
+
+    <div class="page-wrapper">
+        <!-- Page header -->
+        <div class="page-header d-print-none">
+            <div class="container-xl">
+                <div class="row g-2 align-items-center">
+                    <div class="col">
+                        <h2 class="page-title">
+                            Help Page
+                        </h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Page body -->
+        <div class="page-body">
+            <div class="container-xl">
+                <div class="card card-lg">
+                    <div class="card-body ">
+                        <div class="row g-4">
+                            <div class="col-12 markdown">
+                                <h1>1. What information is avaiable in scCVD?</h1>
+                                <p>scCVD provides a curated and harmonized collection of single-cell cerebrovascular disease data, including scRNA-seq and scATAC-seq datasets, detailed sample metadata, cell-type annotations, disease conditions, stages, and intervention information. It also offers gene expression profiles, chromatin accessibility signals, transcription factor regulatory information, pathway enrichment results, and interactive tools for exploring cellular heterogeneity and molecular mechanisms in cerebrovascular disease.</p>
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <h1>2. Data Content in scCVD.</h1>
+                                <p>scCVD provides a curated and harmonized single-cell resource for cerebrovascular disease research. It currently integrates 71 single-cell datasets, covering 1,671,627 cells from 1,272 samples across major cerebrovascular disease conditions, including ischaemic stroke, cerebral haemorrhage, and cerebral small vessel disease. The database includes both scRNA-seq and scATAC-seq data, together with standardized sample metadata such as disease type, disease stage or time point, species, tissue or brain region, experimental model, treatment or intervention, sequencing platform, and cell-type annotation.</p>
+                                <p>In addition to basic data browsing, scCVD provides processed molecular features and analysis results, including gene expression profiles, cell-type-specific marker genes, chromatin accessibility signals, transcription factor regulatory information, pathway enrichment results, and cell-cell communication analyses. These data and tools enable users to explore cellular heterogeneity, dynamic molecular changes, epigenomic regulation, and disease-associated mechanisms across different cerebrovascular disease contexts.</p>
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <h1>3. How to use the scCVD?</h1>
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <h3>3.1 Browse</h3>
+                                <p>The **Browse** page allows users to quickly explore all datasets and samples collected in scCVD. On this page, users can browse standardized metadata for each dataset, including dataset ID, publication information, disease category, species, tissue or brain region, sequencing technology, sample number, cell number, disease stage or time point, experimental model, and intervention status. The table is searchable and filterable, enabling users to narrow down the data by specific conditions such as ischaemic stroke, cerebral haemorrhage, cerebral small vessel disease, control samples, treated samples, or particular time points.</p>
+                            </div>
+                            <div class="col-md-12">
+                                <img class="d-block w-100" alt="" src="img/browse.png" style="width: 70%" />
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <h3>3.2 Search</h3>
+                                <p>The search module of the scCVD platform is designed to enable users to efficiently screen and analyze single-cell sequencing datasets based on disease keywords. This function supports customized disease-oriented data retrieval and downstream analytical exploration, providing reliable and standardized analytical resources for cardiovascular and cerebrovascular disease research. Users can initiate the entire analytical workflow simply by select targeted disease terms in the search box on the search interface, and the platform will automatically match and display all qualified datasets corresponding to the submitted disease keywords.</p>
+                            </div>
+                            <div class="col-md-12">
+                                <img class="d-block w-100" alt="" src="img/search1.png" />
+                            </div>
+                            <div class="col-md-6 markdown">
+                                <p>After completing keyword retrieval, users can browse the list of matched datasets and select the desired sample according to specific research demands. All datasets integrated in the scCVD platform have undergone strict quality control and standardized preprocessing, eliminating the need for manual data cleaning and optimization by users. Once a dataset is selected, the platform automatically presents standardized cell annotation results, offering a clear overview of cell subtype composition and distribution within the sample.</p>
+                            </div>
+                            <div class="col-md-5 markdown">
+                                <img class="d-block w-100" alt="" src="img/search2.png" />
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <p>Each sample detail page presents fundamental visual and statistical outputs, such as cell composition distribution plots, sequencing quality control data, interactive UMAP clustering results, and key conclusions from original studies. It also provides dataset-specific single-cell omics analyses: scRNA-seq samples support cell annotation validation, differential gene and functional enrichment, transcription factor activity assessment, pseudotime trajectory inference, cell-cell communication and gene co-expression network analysis, while scATAC-seq samples offer comprehensive epigenomic analyses including gene activity evaluation, differential chromatin accessibility annotation, chromatin co-accessibility profiling, and cell-type-specific transcription factor motif activity analysis.</p>
+                                <p>Additionally, the detail page embeds bulk RNA-seq resources for complementary analysis. Users can query normalized gene expression across diverse CVD-related bulk samples and compare expression patterns across distinct disease models, pathological time points and experimental conditions, enabling reliable cross-validation between single-cell molecular mechanisms and bulk transcriptomic signatures.</p>
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <img class="d-block w-100" alt="" src="img/search3.png" />
+                            </div>
+                            <div class="col-12 markdown">
+                                <h3>3.3 Analysis</h3>
+                                <p>scCVD provides four online analysis tools tailored to CVD research scenarios: Metadata Analysis, Gene Set Enrichment Analysis, Single Gene Analysis and Comparison Analysis. These tools enable multidimensional and customised data mining and personalised analysis without requiring users to deploy a local computational environment.</p>
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <h4>3.3.1 Gene Set Enrichment Analysis</h4>
+                            </div>
+                            <div class="col-md-6 markdown">
+                                <p>Users can select the Gene Set Enrichment Analysis tool from the navigation panel. After entering a gene set of interest, users can filter results by customizing threshold and FDR adjustment criteria. Upon submission, the system performs enrichment analysis against cell-type-specific background differential genes in the database and generates a table summarizing significantly enriched sample profiles.</p>
+                            </div>
+                            <div class="col-md-6 markdown">
+                                <img class="d-block w-50" alt="" src="img/analysis1.png" />
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <img class="d-block w-100" alt="" src="img/analysis2.png" />
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <h4>3.3.2 Comparison Analysis</h4>
+                            </div>
+                            <div class="col-md-6 markdown">
+                                <p>Users can select datasets by clicking any row in the result table. After choosing two samples for comparison and submitting the task, the system will display the corresponding cell-type UMAP visualizations and gene expression patterns of the two samples on the result page.</p>
+                            </div>
+                            <div class="col-md-6 markdown">
+                                <img class="d-block w-50" alt="" src="img/analysis3.png" />
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <img class="d-block w-100" alt="" src="img/analysis4.png" />
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <h4>3.3.3 The Metadata Analysis</h4>
+                            </div>
+                            <div class="col-md-6 markdown">
+                                <p>After entering the Metadata Analysis interface, users can select a sample of interest and submit the selection to visualize its corresponding UMAP plot. Multiple configuration parameters on the left sidebar allow flexible adjustment of the graphical display. In the lower Gene Expression Visualization module, users can input target gene sets to explore their expression patterns across different cell types.</p>
+                            </div>
+                            <div class="col-md-6 markdown">
+                                <img class="d-block w-50" alt="" src="img/analysis5.png" />
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <img class="d-block w-100" alt="" src="img/analysis6.png" />
+                            </div>
+
+                            <div class="col-md-12 markdown">
+                                <h4>3.3.4 Single Gene Analysis</h4>
+                            </div>
+                            <div class="col-md-6 markdown">
+                                <p>Upon accessing the Single gene analysis interface, users first select a target gene and a sample of interest from the selection boxes. After submission, the system analyzes and visualizes the gene’s expression patterns across multiple groups and its expression levels in different cell types of the selected sample. This module also displays candidate transcriptional regulators predicted using the pySCENIC tool.</p>
+                            </div>
+                            <div class="col-md-6 markdown">
+                                <img class="d-block w-50" alt="" src="img/analysis7.png" />
+                            </div>
+                            <div class="col-md-12 markdown">
+                                <img class="d-block w-100" alt="" src="img/analysis8.png" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer th:replace="inc/inc :: footer"></footer>
+    </div>
+</div>
+<div th:replace="inc/plugins :: script"></div>
+
+
+
+</body>
+</html>

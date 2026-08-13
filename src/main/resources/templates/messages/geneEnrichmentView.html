@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+  <style>
+    #select-celltype-selectized{position: unset !important;}
+    .table th {
+      text-transform: none !important;
+    }
+  </style>
+  <body >
+    <div class="page">
+      <!-- Navbar -->
+      <header th:replace="inc/inc :: header"></header>
+
+      <div class="page-wrapper">
+        <!-- Page body -->
+        <div class="page-body">
+          <div class="container-xl">
+            <div class="row">
+              <div class="col-md-12">
+                <div class="card card-stacked">
+                  <div class="ribbon ribbon-top bg-blue">
+                    <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-presentation-analytics"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 12v-4" /><path d="M15 12v-2" /><path d="M12 12v-1" /><path d="M3 4h18" /><path d="M4 4v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-10" /><path d="M12 16v4" /><path d="M9 20h6" /></svg>
+                  </div>
+                  <div class="card-body">
+                    <h3 class="card-title">Gene Set Enrichment Analysis Result.</h3>
+                    <!--提示框，可用可不用-->
+                    <div class="alert alert-info alert-dismissible" role="alert" id="info">
+                      <div class="alert-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon alert-icon icon-2"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg></div>
+                      <div>
+                        <h4 class="alert-heading">Analyzing Your Data...</h4>
+                        <div class="alert-description">
+                          Please wait a moment while we process everything.
+                        </div>
+                      </div>
+                      <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+                    </div>
+                    <div class="alert alert-success alert-dismissible" role="alert" id="success" style="display:none;">
+                      <div class="alert-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon alert-icon icon-2"><path d="M5 12l5 5l10 -10" /></svg></div>
+                      <div>
+                        <h4 class="alert-heading">Analysis Complete!</h4>
+                        <div class="alert-description">
+                          Your data results are ready to explore.
+                        </div>
+                      </div>
+                      <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+                    </div>
+                    <div class="alert alert-danger alert-dismissible" role="alert" id="danger" style="display:none;">
+                      <div class="alert-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon alert-icon icon-2"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg></div>
+                      <div>
+                        <h4 class="alert-heading">Analysis Error Occurred!</h4>
+                        <div class="alert-description">
+                          Please check your input and contact support if needed.
+                        </div>
+                      </div>
+                      <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+                    </div>
+
+                    <table class="table" id="enrichTab">
+                      <tbody class="table-tbody">
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer th:replace="inc/inc :: footer"></footer>
+      </div>
+    </div>
+    <div th:replace="inc/plugins :: script"></div>
+  </body>
+  <script th:inline="javascript">
+    new DataTable('#example');
+    const genes = [[${genes}]];
+    const threshold = [[${threshold}]];
+    const adjust = [[${adjust}]];
+    const menu = [10, 20, 50, 100];
+    $.ajax({
+      url: "geneEnrichmentRun",
+      type: "GET",
+      dataType: "json",
+      async: true,
+      data: {"genes":genes,"threshold":threshold,"adjust":adjust},
+      success: function(data) {
+        $('#info').hide();
+        $('#success').show();
+        new DataTable('#enrichTab', {
+          data: data.enrichmentResult,
+          order: [],
+          scrollX: true,
+          lengthMenu: [menu, menu],
+          columns: [
+            {
+              "title": "sampleid",
+              "data": "sampleid",
+              "render": function (data, type, row, meta) {
+                return "<a target='_blank' href='getDetailViewGL?id=" + row.sampleid + "'>" + row.sampleid + "</a>";
+              }
+            },
+            {"title": "samplename","data": "sample"},
+            {"title": "species","data": "species"},
+            {"title": "tissue","data": "tissue"},
+            {"title": "disease","data": "disease"},
+            {"title": "age","data": "age"},
+            {"title": "Celltype","data": "cluster"},
+            {"title": "pvalue","data": "pvalue"},
+            {"title": "padjust","data": "padj"},
+            {
+              "title": "gseid",
+              "data": "gse_id",
+              "render": function (data, type, row, meta) {
+                return "<a target='_blank' href='https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=" + row.gse_id + "'>" + row.gse_id + "</a>";
+              }
+            },
+            {
+              "title": "Matched genes",
+              "data": "genes",
+              "render": function (data, type, row, meta) {
+                const parts = row.genes.split(',');
+                const genesSub = parts.slice(0, 4).join(',');
+                const show = '<span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-html="true" data-bs-content="<p>All matched gene names: '+ row.genes +'</p>">'+ row.matchCount +'</span>';
+                return genesSub+"; "+show;
+              }
+            },
+            // {"title": "bg gene count","data": "gene_count"},
+            {
+              "title": "article",
+              "data": "article",
+              "render": function (data, type, row, meta) {
+                const show = '<span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-html="true" data-bs-content="<p>Title of the Article: '+ row.article +'</p>">?</span>';
+                return "<a target='_blank' href='https://pubmed.ncbi.nlm.nih.gov/" + row.pmid + "'>" + row.pmid + "</a>" + show;
+              }
+            },
+            {"title": "journal","data": "journal"},
+            {"title": "year","data": "year"}
+            // {"title": "article","data": "article"},
+            //{"title": "genomic","data": "genomic"},
+            //{"title": "technology","data": "technology"},
+            //{"title": "strain","data": "strain"},
+          ],
+          initComplete: function() {
+            // 注意bootstrap的popover使用时需要初始化，所以在datatables中使用时应该初始化 popover
+            $('[data-bs-toggle="popover"]').popover();
+          },
+          drawCallback: function() {
+            // 而且在使用datatables时因为排序搜索等功能，要在每次表格重绘时初始化 popover
+            $('[data-bs-toggle="popover"]').popover();
+          },
+          oLanguage: {
+            "sProcessing": 'processing......',
+            "sLengthMenu": "_MENU_ entries per page",
+            "sZeroRecords": "No matching data found",
+            "sInfo": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "sInfoEmpty": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "sInfoFiltered": "( Filter from _MAX_ records )",
+            "sSearch": "Search: ",
+            "oPaginate": {
+              "sFirst": "home",
+              "sPrevious": "‹",
+              "sNext": "›",
+              "sLast": "end"
+            }
+          }
+        });
+      },
+      error: function() {
+        $('#danger').show();
+      }
+    });
+</script>
+</html>

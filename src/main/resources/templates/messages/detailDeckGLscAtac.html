@@ -1,0 +1,919 @@
+<!doctype html>
+
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+<style>
+  /*#select-console-selectized{position: unset !important;}#设置select下拉框高度为默认大小，selectize插件会导致select变矮，select-console是select的id*/
+  #featureDeckgl{
+    width: 500px;
+    height: 500px;
+  }
+  .form-check-label{white-space: nowrap;}
+  .form-check{margin-bottom: .25rem;}
+  .wordBreak {
+    white-space: nowrap;
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
+  .text-pull {
+    text-align: justify;
+    hyphens: auto;
+  }
+  #sampleDescript td {
+    padding: 0.25rem 0.75rem;
+  }
+  #control-panel {
+    position: absolute;
+    top: 80px;
+    left: 0;
+    margin: 12px;
+    padding: 20px;
+
+    z-index: 1;
+  }
+  #control-panel2 {
+    position: absolute;
+    top: 80px;
+    left: 0;
+    margin: 12px;
+    padding: 10px;
+    margin-top: 30px;
+    z-index: 1;
+  }
+  .table th {
+    text-transform: none !important;
+  }
+</style>
+<body >
+<div class="page">
+  <!-- Navbar -->
+  <header th:replace="inc/inc :: header"></header>
+
+  <div class="page-wrapper">
+    <!-- Page body -->
+    <div class="page-body">
+      <div class="container-xl">
+        <div class="card mt-3 mb-3 card-stacked">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-5">
+                <h3 class="card-title">Dataset information</h3>
+                <div class="table-responsive">
+                  <table class="table table-borderless table-striped" id="sampleDescript">
+                  </table>
+                </div>
+              </div>
+              <div class="col-md-7">
+                <h3 class="card-title">Sample table</h3>
+                <table class="table" id="sampleInfo" style="width: 100%;">
+                  <tbody class="table-tbody">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+                  <li class="nav-item">
+                    <a href="#tabs-count-celltype" class="nav-link active" data-bs-toggle="tab">Cell Type Composition Across Samples</a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="#tabs-count-cluster" class="nav-link" data-bs-toggle="tab">Cluster Abundance Across Samples</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="card-body">
+                <div class="tab-content">
+                  <div class="tab-pane active show" id="tabs-count-celltype">
+                    <label class="form-label">Cell numbers of annotated cell types in each sample.</label>
+                    <div id="cellNumber" style="width: 100%;height: 300px;"></div>
+                  </div>
+                  <div class="tab-pane" id="tabs-count-cluster">
+                    <label class="form-label">Cell numbers of unsupervised clusters in each sample.</label>
+                    <div id="cellNumberCluster" style="height: 300px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+                  <li class="nav-item">
+                    <a href="#tabs-qc-1" class="nav-link active" data-bs-toggle="tab">Total Fragments in Peaks</a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="#tabs-qc-2" class="nav-link" data-bs-toggle="tab">TSS Enrichment Score</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="card-body">
+                <div class="tab-content">
+                  <div class="tab-pane active show" id="tabs-qc-1">
+                    <label class="form-label">Total Fragments in Peaks.</label>
+                    <div id="qc1" style="width: 100%;height: 300px;"></div>
+                  </div>
+                  <div class="tab-pane" id="tabs-qc-2">
+                    <label class="form-label">TSS Enrichment Score.</label>
+                    <div id="qc2" style="width: 100%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Content here -->
+        <div class="row mt-3">
+          <div class="col-md-7"><!--细胞类型-->
+            <div class="card" style="height: 650px;">
+              <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+                  <li class="nav-item">
+                    <a href="#tabs-umap" class="nav-link active" data-bs-toggle="tab">Multidimensional UMAP Visualization</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="card-body">
+                <div class="tab-content">
+                  <div class="tab-pane active show" id="tabs-umap">
+                    <div class="row">
+                      <div class="mb-3 col-md-4">
+                        <label class="form-label">Visualize by Category
+                          <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">
+                            <a th:href="@{/{id}_umapAnno.pdf(id=${id})}" th:download="${id} + '_umapAnno.pdf'">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-file-type-pdf"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M14 3v4a1 1 0 0 0 1 1h4"></path><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4"></path><path d="M5 18h1.5a1.5 1.5 0 0 0 0 -3h-1.5v6"></path><path d="M17 18h2"></path><path d="M20 15h-3v6"></path><path d="M11 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1z"></path></svg>
+                            </a>
+                          </button>
+                        </label>
+                        <select id="select-group" placeholder="Input placeholder">
+                        </select>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col-md-12" style="position: relative">
+                        <div>
+                          <div id="umapPlotGLlodding" class="spinner-border text-blue" role="status"></div>
+                        </div>
+                        <div id="node" class="card-img" style="width: 100%;height:480px;"></div>
+                        <div class="card-img-overlay" onmouseleave="labelShowFun('out')" style="overflow: auto;top:0;left:0;position: absolute;background-color:rgba(255, 255, 255, 0.5);height:350px;width: 200px;z-index: 1 !important;">
+                          <div id="labelName" style="height: 320px;"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-5"><!--基因表达-->
+            <div class="card" style="height: 650px;">
+              <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+                  <!--<li class="nav-item">
+                    <a href="#tabs-marker" class="nav-link" data-bs-toggle="tab">Marker</a>
+                  </li>-->
+                  <li class="nav-item">
+                    <a href="#tabs-umap-gene" class="nav-link active" data-bs-toggle="tab">Gene(Cicero)</a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="#tabs-umap-signac" class="nav-link" data-bs-toggle="tab">Gene(Signac)</a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="#tabs-umap-tf" class="nav-link" data-bs-toggle="tab">Transcription Factor</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="card-body">
+                <div class="tab-content">
+                  <!--<div class="tab-pane" id="tabs-marker">
+                    <label class="form-label">Marker Gene Expression Across Cell Types.</label>
+                    <div id="dotmarker" style="width: 100%;height:550px;"></div>
+                  </div>-->
+                  <div class="tab-pane active show" id="tabs-umap-gene">
+                    <div class="row">
+                      <label class="form-label">Gene Expression Visualization
+                        <span data-bs-toggle="toast" data-bs-target="#toast-geneDescription" id="showGeneDescription" onclick="showGeneDescription()">
+                              <svg data-bs-toggle="tooltip" data-bs-placement="top" title="Click to view the selected gene summary." xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-info-circle"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg>
+                            </span>
+                        <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">
+                          <a th:href="@{/{id}_cicero_gene_activity_matrix.h5(id=${id})}" th:download="${id} + '_cicero_gene_activity_matrix.h5'">
+                            <svg data-bs-toggle="tooltip" data-bs-placement="top" title="Download gene expression data." xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-digit"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M9 12m0 1a1 1 0 0 1 1 -1h1a1 1 0 0 1 1 1v3a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1z" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M15 12v5" /></svg>
+                          </a>
+                        </button>
+                      </label>
+                      <div class="mb-3 col-md-6">
+                        <select id="select-feature" placeholder="Input placeholder"></select>
+                      </div>
+                    </div>
+                    <div id="control-panel">
+                      <div class="form-label">Expression level</div>
+                      <div>
+                        <span class="status-dot status-dot-animated status-blue" style="background-color: rgb(237, 248, 251)"></span>
+                        <label>0.0</label>
+                      </div>
+                      <div>
+                        <span class="status-dot status-dot-animated status-blue" style="background-color: rgb(102, 194, 164)"></span>
+                        <label>middle</label>
+                      </div>
+                      <div>
+                        <span class="status-dot status-dot-animated status-blue" style="background-color: rgb(0, 109, 44)"><div id="genePlotGLlodding" class="spinner-border text-blue" role="status"></div></span>
+                        <label id="featureMax"></label>
+                      </div>
+                    </div>
+                    <div id="featurePlotGL1" style="width: 100%;height:480px;"></div>
+                    <!--                        <div id="featurePlotGL" style="width: 100%;height:480px;"></div>-->
+                  </div>
+                  <div class="tab-pane" id="tabs-umap-signac">
+                    <div class="row">
+                      <label class="form-label">Gene Expression Visualization
+                        <span data-bs-toggle="toast" data-bs-target="#toast-signacDescription" id="showSignacDescription" onclick="showSignacDescription()">
+                              <svg data-bs-toggle="tooltip" data-bs-placement="top" title="Click to view the selected gene summary." xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-info-circle"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg>
+                            </span>
+                        <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">
+                          <a th:href="@{/{id}_signac_gene_activity_matrix.h5(id=${id})}" th:download="${id} + '_signac_gene_activity_matrix.h5'">
+                            <svg data-bs-toggle="tooltip" data-bs-placement="top" title="Download gene expression data." xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-digit"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M9 12m0 1a1 1 0 0 1 1 -1h1a1 1 0 0 1 1 1v3a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1z" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M15 12v5" /></svg>
+                          </a>
+                        </button>
+                      </label>
+                      <div class="mb-3 col-md-6">
+                        <select id="select-signac" placeholder="Input placeholder"></select>
+                      </div>
+                    </div>
+                    <div id="control-panel2">
+                      <div class="form-label">Expression level</div>
+                      <div>
+                        <span class="status-dot status-dot-animated status-blue" style="background-color: rgb(237, 248, 251)"></span>
+                        <label>0.0</label>
+                      </div>
+                      <div>
+                        <span class="status-dot status-dot-animated status-blue" style="background-color: rgb(102, 194, 164)"></span>
+                        <label>middle</label>
+                      </div>
+                      <div>
+                        <span class="status-dot status-dot-animated status-blue" style="background-color: rgb(0, 109, 44)"><div id="signacPlotGLlodding" class="spinner-border text-blue" role="status"></div></span>
+                        <label id="signacMax"></label>
+                      </div>
+                    </div>
+                    <label id="signacshow">There is no Signac gene activity data for the current sample.</label>
+                    <div id="signacPlotGL1" style="width: 100%;height:470px;"></div>
+                    <!--                        <div id="featurePlotGL" style="width: 100%;height:480px;"></div>-->
+                  </div>
+                  <div class="tab-pane" id="tabs-umap-tf">
+                    <div class="row">
+                      <label class="form-label">Transcription Factor Activity of pySCENIC.
+                        <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">
+                          <a th:href="@{/{id}_chromVar_obj_zscores.csv(id=${id})}" th:download="${id} + '_chromVar_obj_zscores.csv'">
+                            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-digit"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M9 12m0 1a1 1 0 0 1 1 -1h1a1 1 0 0 1 1 1v3a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1z" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M15 12v5" /></svg>
+                          </a>
+                        </button>
+                      </label>
+                      <div class="mb-3 col-md-12">
+                        <select id="select-tf" placeholder="Input placeholder"></select>
+                      </div>
+                    </div>
+                    <div id="tfPlotGL" style="width: 100%;height:480px;text-align: center"><div id="tfPlotGLlodding" class="spinner-border text-blue" role="status"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-3">
+          <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+              <li class="nav-item">
+                <a href="#tabs-deg-celltype" class="nav-link active" data-bs-toggle="tab">Cell Type-Specific Analysis</a>
+              </li>
+            </ul>
+          </div>
+          <div class="card-body">
+            <div class="tab-content">
+              <div class="tab-pane active show" id="tabs-deg-celltype">
+                <div class="row">
+                  <div class="mb-3 col-md-12">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <label class="form-label">Cell Type-Specific Differentially accessible chromatin region.
+                          <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">
+                            <a th:href="@{/{id}_DA_peak.tsv(id=${id})}" th:download="${id} + '_degs_celltype.tsv'">
+                              <svg xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-type-csv"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M7 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" /><path d="M10 20.25c0 .414 .336 .75 .75 .75h1.25a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-1a1 1 0 0 1 1 -1h1.25a.75 .75 0 0 1 .75 .75" /><path d="M16 15l2 6l2 -6" /></svg>
+                            </a>
+                          </button>
+                        </label>
+                      </div>
+                    </div>
+                    <table class="table table-nowrap display compact" id="peakdegTable">
+                      <thead>
+                      <tr>
+                        <!--<th>Chr</th>
+                        <th>Start</th>
+                        <th>End</th>-->
+                        <th>Peaks</th>
+                        <th>Gene</th>
+                        <th>Distance</th>
+                        <th>Pvalue</th>
+                        <th>AvgLog2FC</th>
+                        <th>PCT1</th>
+                        <th>PCT2</th>
+                        <th>PvalueAdj</th>
+                        <th>Celltype</th>
+                      </tr>
+                      </thead>
+                      <tbody class="table-tbody">
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="mb-3 col-md-6">
+                    <div class="card" style="border: none">
+                      <div class="card-status-top bg-green"></div>
+                      <div class="row">
+                        <div class="col-md-12">
+                          <label class="form-label mt-1">Gene Ontology Terms Enrichment of Cell Type-Specific DEGs.
+                            <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">
+                              <a th:href="@{/{id}_Enriched.tsv(id=${id})}" th:download="${id} + '_Enriched.tsv'">
+                                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-type-csv"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M7 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" /><path d="M10 20.25c0 .414 .336 .75 .75 .75h1.25a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-1a1 1 0 0 1 1 -1h1.25a.75 .75 0 0 1 .75 .75" /><path d="M16 15l2 6l2 -6" /></svg>
+                              </a>
+                            </button>
+                          </label>
+                        </div>
+                      </div>
+                      <form class="row g-3">
+                        <div class="col-md-4">
+                          <label for="select-celltype-go" class="form-label">CellType</label>
+                          <select class="form-select" id="select-celltype-go">
+                          </select>
+                        </div>
+                        <div class="col-md-4">
+                          <label for="select-celltype-ontology" class="form-label">Ontology</label>
+                          <select class="form-select" id="select-celltype-ontology">
+                          </select>
+                        </div>
+                        <div class="col-md-4">
+                          <label for="select-celltypeAdj-go" class="form-label">P.Adjust</label>
+                          <select class="form-select" id="select-celltypeAdj-go">
+                          </select>
+                        </div>
+                      </form>
+                      <div id='gocelltypeImg' style="width: 610px;height: 450px;"></div>
+                    </div>
+                  </div>
+                  <div class="mb-3 col-md-6">
+                    <div class="card" style="border: none">
+                      <div class="card-status-top bg-green"></div>
+                      <div class="row">
+                        <div class="col-md-12">
+                          <label class="form-label mt-1">KEGG Pathway Enrichment of Cell Type-Specific DEGs.
+                            <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">
+                              <a th:href="@{/{id}_Enriched.tsv(id=${id})}" th:download="${id} + '_Enriched.tsv'">
+                                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-type-csv"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M7 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" /><path d="M10 20.25c0 .414 .336 .75 .75 .75h1.25a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-1a1 1 0 0 1 1 -1h1.25a.75 .75 0 0 1 .75 .75" /><path d="M16 15l2 6l2 -6" /></svg>
+                              </a>
+                            </button>
+                          </label>
+                        </div>
+                      </div>
+                      <form class="row g-3">
+                        <div class="col-md-4">
+                          <label for="select-celltype-kegg" class="form-label">CellType</label>
+                          <select class="form-select" id="select-celltype-kegg">
+                          </select>
+                        </div>
+                        <div class="col-md-4">
+                          <label for="select-celltypeAdj-kegg" class="form-label">P.Adjust</label>
+                          <select class="form-select" id="select-celltypeAdj-kegg">
+                          </select>
+                        </div>
+                      </form>
+                      <div id='keggcelltypeImg' style="width: 610px;height: 450px;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-3">
+          <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+              <li class="nav-item">
+                <a href="" class="nav-link active" data-bs-toggle="tab">Cicero interactions.</a>
+              </li>
+            </ul>
+          </div>
+          <div class="card-body">
+            <div class="tab-content">
+              <div class="tab-pane active show">
+                <div class="row">
+                  <div class="col-md-12">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <label class="form-label">Cicero Interactions.
+                          <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">
+                            <a th:href="@{/{id}_cicero_interactions.txt(id=${id})}" th:download="${id} + '_cicero_interactions.txt'">
+                              <svg xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-type-csv"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M7 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" /><path d="M10 20.25c0 .414 .336 .75 .75 .75h1.25a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-1a1 1 0 0 1 1 -1h1.25a.75 .75 0 0 1 .75 .75" /><path d="M16 15l2 6l2 -6" /></svg>
+                            </a>
+                          </button>
+                        </label>
+                      </div>
+                    </div>
+                    <table class="table" id="toCiceroTab">
+                      <thead>
+                      <tr>
+                        <th>Peak1</th>
+                        <th>Peak1_Gene</th>
+                        <th>Peak2</th>
+                        <th>Peak2_Gene</th>
+                        <th>Coaccess</th>
+                      </tr>
+                      </thead>
+                      <tbody class="table-tbody">
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card mt-3">
+              <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+                  <li class="nav-item">
+                    <a href="#tabs-wgcna-module" class="nav-link active" data-bs-toggle="tab">Differential transcription factor motif.</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="card-body" style="height: 591px;">
+                <div class="tab-content">
+                  <div class="tab-pane active show" id="tabs-wgcna-module">
+                    <div class="row">
+                      <div class="col-md-12">
+                        <label class="form-label">Differential transcription factor motif.
+                          <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">
+                            <a th:href="@{/{id}_differential_TF_motif_enriched_in_clusters.tsv(id=${id})}" th:download="${id} + '_differential_TF_motif_enriched_in_clusters.tsv'">
+                              <svg xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-type-csv"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M7 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" /><path d="M10 20.25c0 .414 .336 .75 .75 .75h1.25a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-1a1 1 0 0 1 1 -1h1.25a.75 .75 0 0 1 .75 .75" /><path d="M16 15l2 6l2 -6" /></svg>
+                            </a>
+                          </button>
+                        </label>
+                      </div>
+                    </div>
+                    <table class="table" id="toDiffTfMotifTab">
+                      <thead>
+                      <tr>
+                        <th>Feature</th>
+                        <th>Cluster</th>
+                        <th>Mean1</th>
+                        <th>Mean2</th>
+                        <th>Pvalue</th>
+                        <th>Pvalue Adjust</th>
+                        <th>TF Name</th>
+                      </tr>
+                      </thead>
+                      <tbody class="table-tbody">
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card mt-3">
+              <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+                  <li class="nav-item">
+                    <a href="#tabs-motif-heat" class="nav-link active" data-bs-toggle="tab">TF motif activity scores.</a>
+                  </li>
+                </ul>
+              </div>
+              <div class="card-body">
+                <div class="tab-content">
+                  <div class="tab-pane active show" id="tabs-motif-heat">
+                    <div class="row">
+                      <div class="col-md-12">
+                        <label class="form-label">TF motif activity scores (Randomly select 1000 cells).
+                          <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">
+                            <a th:href="@{/{id}_TF1000.rds(id=${id})}" th:download="${id} + '_TF1000.rds'">
+                              <svg xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-type-csv"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M7 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" /><path d="M10 20.25c0 .414 .336 .75 .75 .75h1.25a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-1a1 1 0 0 1 1 -1h1.25a.75 .75 0 0 1 .75 .75" /><path d="M16 15l2 6l2 -6" /></svg>
+                            </a>
+                          </button>
+                        </label>
+                        <iframe src="" id="getTFHeat" style="width: 100%; height: 400px;"></iframe>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+
+        <div class="card mt-3">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-5">
+                <div class="row">
+                  <label class="form-label">Expression Distribution Across Datasets
+                  </label>
+                  <div class="col-md-6">
+                    <select id="select-feature-rna" placeholder="Input placeholder"></select>
+                  </div>
+                </div>
+                <div id="toRnaBox" style="height: 355px;"></div>
+              </div>
+              <div class="col-md-7">
+                <label class="form-label">RNA-seq Sample Information by Species
+                  <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">
+                    <a th:href="@{/sample_table_rna.csv}" th:download="'sample_table_rna.csv'">
+                      <svg xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-type-csv"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M7 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" /><path d="M10 20.25c0 .414 .336 .75 .75 .75h1.25a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-1a1 1 0 0 1 1 -1h1.25a.75 .75 0 0 1 .75 .75" /><path d="M16 15l2 6l2 -6" /></svg>
+                    </a>
+                  </button>
+                </label>
+                <table class="table table-nowrap display compact" id="rnaTab">
+                  <thead>
+                  <tr>
+                    <th>GSEID</th>
+                    <th>GSMID</th>
+                    <th>SampleName</th>
+                    <th>Species</th>
+                    <th>Tissue</th>
+                    <th>Age</th>
+                    <th>Sex</th>
+                    <th>Treatment</th>
+                    <th>Disease</th>
+                    <th>Times</th>
+                    <th>Genomic</th>
+                    <th>Strain</th>
+                    <th>PMID</th>
+                    <th>Journal</th>
+                    <th>Year</th>
+                  </tr>
+                  </thead>
+                  <tbody class="table-tbody">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-3">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-12">
+                <div class="row">
+                  <label class="form-label">Expression Differences Between Case and Control</label>
+                  <div class="col-md-3">
+                    <select id="select-feature-rna-group" placeholder="Input placeholder"></select>
+                  </div>
+                </div>
+                <div id="toRnaBubble" style="height: 400px;"></div>
+              </div>
+              <div class="col-md-12 mt-3">
+                <label class="form-label">Differential Gene Group Information by Dataset
+                  <button class="icon-tada icon-demo-size-32 icon-demo-stroke-150" style="border: none;background: none;">
+                    <a th:href="@{/rna_deg_analysis_summary.csv}" th:download="'rna_deg_analysis_summary.csv'">
+                      <svg xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-file-type-csv"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4" /><path d="M7 16.5a1.5 1.5 0 0 0 -3 0v3a1.5 1.5 0 0 0 3 0" /><path d="M10 20.25c0 .414 .336 .75 .75 .75h1.25a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-1a1 1 0 0 1 1 -1h1.25a.75 .75 0 0 1 .75 .75" /><path d="M16 15l2 6l2 -6" /></svg>
+                    </a>
+                  </button>
+                </label>
+                <table class="table table-nowrap display compact" id="rnaTabGroup">
+                  <thead>
+                  <tr>
+                    <th>GSEID</th>
+                    <th>Case_Group</th>
+                    <th>Ctrl_Group</th>
+                    <th>Sample_Num</th>
+                    <th>Sample_Name</th>
+                    <th>Times</th>
+                  </tr>
+                  </thead>
+                  <tbody class="table-tbody">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <footer th:replace="inc/inc :: geneDescription"></footer>
+
+
+    <footer th:replace="inc/inc :: footer"></footer>
+  </div>
+</div>
+<div th:replace="inc/plugins :: script"></div>
+<script th:src="@{/js/plotly-2.34.0.min.js}"></script>
+<!--    <script src="https://unpkg.com/deck.gl@^9.0.0/dist.min.js"></script>-->
+<script th:src="@{/js/deckgl9.0.0.dist.min.js}"></script>
+<script th:src="@{/js/d3.v7.min.js}"></script>
+<script th:src="@{/js/deckUmap.js}"></script>
+<script th:src="@{/js/detail.js}"></script>
+
+
+<script th:inline="javascript">
+  let color = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
+    "#9467bd", "#8c564b", "#e377c2", "#8B008B",
+    "#17becf","#FF34B3","#BC8F8F","#20B2AA","#00F5FF",
+    "#FFA500","#ADFF2F","#FF6A6A","#7FFFD4", "#AB82FF",
+    "#90EE90","#00CD00","#008B8B","#6495ED","#FFC1C1",
+    "#CD5C5C","#8b008b","#FF3030", "#7CFC00","#1295ED",
+    "#EEC1C1","#FF5C5C","#1A008B","#EE3030", "#1AFC00"]
+  let id = [[${id}]];
+
+  const {DeckGL, ScatterplotLayer, TextLayer, DataFilterExtension, FlyToInterpolator} = deck;
+
+  {/*获取样本信息*/
+    getSampleDescript(id);
+    getSampleInfo("sampleInfo",id);
+  }
+
+  {/*每个样本细胞类型数量统计图*/
+    const cellNumberWidth = document.getElementById("cellNumber");
+    const divElement = document.getElementById("cellNumberCluster");
+    const divWidth = cellNumberWidth.offsetWidth;
+    divElement.style.setProperty("width", divWidth+"px");
+    toCellNumber(id,"celltype");
+  }
+
+  {/*质量控制信息*/
+    toQc(id, "nFeature_RNA", "qc1");
+  }
+
+  {/*细胞类型UMAP图*/
+    /*定义deck cluster umap的全局变量*/
+    let umapData = null;
+    let clusterValue = null;
+    let group = null;
+    const umapGL = new DeckGL({
+      container: document.getElementById('node'),
+      initialViewState: {
+        longitude: -4,
+        latitude: 3,
+        zoom: 3.5,
+        minZoom: 3,
+        maxZoom: 6
+      },
+      controller: true
+    });
+    /*创建deck cluster umap功能性函数*/
+    function labelChange() {  /*当name=“label”标签的checked发生变化时，调整umap绘图。复选框选择值的变化*/
+      redraw("noUpdateLabel",umapData,clusterValue,umapGL,group);
+    }
+    function labelShowFun(param) {  /*当name=“label”标签的checked发生变化时，调整umap绘图。鼠标指向时的变化*/
+      clusterValue = param;
+      redraw("noUpdateLabel",umapData,clusterValue,umapGL,group);
+    }
+    function redraw(updateLabel,umapData,clusterValue,umapGL,group){
+      /*
+      * updateLabel:分类标签，值为noUpdateLabel（不发生变化）和updateLabel（更新cluster文本框）
+      * umapData:绘图数据
+      * clusterValue:鼠标指向的cluster的值，当未选时为null。
+      * umapGL:基于DeckGL的umap绘图。
+      * group:下拉菜单当前值，celltype、cluster、origident、sex
+      * */
+      const selectedCheckboxes = document.querySelectorAll('#labelName input[name="label"]:checked');
+      let selectCluster = Array.from(selectedCheckboxes).map(checkbox => checkbox.value); //selectCluster存储的是当前选中的复选框，也就是展示的clusters
+      let categoryText = null;
+      if (group=="celltype"){
+        categoryText = umapData.celltypeText
+      }else if (group=="clusters"){
+        categoryText = umapData.clusterText
+      }else if (group=="origident"){
+        categoryText = umapData.origText
+      }else if (group=="sex"){
+        categoryText = umapData.sexText
+      }else if (group=="age"){
+        categoryText = umapData.ageText
+      }else if (group=="times"){
+        categoryText = umapData.timesText
+      }else if (group=="tissue"){
+        categoryText = umapData.tissueText
+      }else if (group=="treatment"){
+        categoryText = umapData.treatmentText
+      }
+
+      // let categorys = [...new Set(categoryText.map(item => item.category))];
+      let categorys = [...new Set(Array.isArray(categoryText) ? categoryText.map(item => item.category) : [])];
+      const colorMap = colorMapFun(categorys);
+      if (updateLabel!="noUpdateLabel"){  /*根据category生成umap图分类标签*/
+        selectCluster = categorys;
+        let labelNameHtml = "<div class='form-label'>Clusters and Cell Count</div>\n"
+        $.each(categorys, function(index, value) {
+          labelNameHtml = labelNameHtml +
+                  "<label class='form-check' onmouseover='labelShowFun(\""+ value +"\")'>\n" +
+                  " <input class='form-check-input' type='checkbox' onchange='labelChange()' name='label' value='"+ value +"' style='background-color: rgb("+ colorMap.get(value) +")' checked />\n" +
+                  " <span class='form-check-label'>" + value + " <span class='status status-blue'>" + categoryText[index].count + "</span>\n" + "</span>\n" +
+                  "</label>\n"
+        });
+        $('#labelName').html(labelNameHtml);
+      }
+      const nodelayer = new ScatterplotLayer({
+        id: 'scatter-plot',
+        data: umapData.data,
+        getRadius: d => {
+          if (group=="celltype") {
+            return  d.celltype == clusterValue ? 1000:1;
+          } else if (group=="clusters") {
+            return  d.clusters == clusterValue ? 1000:1;
+          }else if (group=="origident") {
+            return  d.origident == clusterValue ? 1000:1;
+          }else if (group=="sex") {
+            return  d.sex == clusterValue ? 1000:1;
+          }else if (group=="age") {
+            return  d.age == clusterValue ? 1000:1;
+          }else if (group=="times") {
+            return  d.times == clusterValue ? 1000:1;
+          }else if (group=="tissue") {
+            return  d.tissue == clusterValue ? 1000:1;
+          }else if (group=="treatment") {
+            return  d.treatment == clusterValue ? 1000:1;
+          }
+        },
+        radiusMaxPixels: 100,
+        radiusMinPixels: 1,
+        radiusScale: 20,
+        getPosition: d => [d.x, d.y],
+        getFillColor: d => {
+          if (group=="celltype") {
+            return  colorMap.get(d.celltype) || [192, 192, 192];
+          } else if (group=="clusters") {
+            return  colorMap.get(d.clusters) || [192, 192, 192];
+          }else if (group=="origident") {
+            return  colorMap.get(d.origident) || [192, 192, 192];
+          }else if (group=="sex") {
+            return  colorMap.get(d.sex) || [192, 192, 192];
+          }else if (group=="age") {
+            return  colorMap.get(d.age) || [192, 192, 192];
+          }else if (group=="times") {
+            return  colorMap.get(d.times) || [192, 192, 192];
+          }else if (group=="tissue") {
+            return  colorMap.get(d.tissue) || [192, 192, 192];
+          }else if (group=="treatment") {
+            return  colorMap.get(d.treatment) || [192, 192, 192];
+          }
+        },
+        getFilterCategory: d => {
+          if (group=="celltype") {
+            return d.celltype;
+          } else if (group=="clusters") {
+            return d.clusters;
+          }else if (group=="origident") {
+            return d.origident;
+          }else if (group=="sex") {
+            return d.sex;
+          }else if (group=="age") {
+            return d.age;
+          }else if (group=="times") {
+            return d.times;
+          }else if (group=="tissue") {
+            return d.tissue;
+          }else if (group=="treatment") {
+            return d.treatment;
+          }
+        },
+        updateTriggers: {
+          getRadius: [clusterValue],  /*鼠标悬停时点的大小变化*/
+          getFillColor: [group],  /*当 group 变化时，强制重新执行 getFillColor*/
+          getFilterCategory: [group]
+        },
+        filterCategories: selectCluster,
+        extensions: [new DataFilterExtension({categorySize: 1})],
+      })
+      const textlayer = new TextLayer({
+        data: categoryText,
+        getPosition: d => [d.x, d.y],
+        getText: d => d.category,
+        getColor: [0, 0, 0],
+        getSize: 15
+      })
+      umapGL.setProps({
+        layers: [nodelayer, textlayer]
+      });
+    }
+
+    const eventHandlerGroup = function(name) {  /*细胞分组下拉列表*/
+      return function() {
+        group = arguments[0];
+        if (umapData == null){
+          $.ajax({
+            url: "getNodeDataGL",
+            type: "GET",
+            dataType: "json",
+            async: true,
+            data: {id: id},
+            success: function(result) {
+              umapData = result;
+              redraw("updateLabel",umapData,clusterValue,umapGL,group);
+              $("#umapPlotGLlodding").hide();
+            }
+          });
+        }else {
+          redraw("updateLabel",umapData,clusterValue,umapGL,group);
+        }
+      };
+    };
+    const groupData = [{name:"Cell Type",value:"celltype"},{name: "Clusters",value: "clusters"},{name: "Orig.Ident",value: "origident"},{name: "Sex",value: "sex"},{name: "Age",value: "age"},{name: "Time of Stroke",value: "times"},{name: "Tissue",value: "tissue"},{name: "Treatment",value: "treatment"}];
+    const $selectGroup = $('#select-group').selectize({
+      valueField: 'value',
+      labelField: 'name',
+      searchField: 'value',
+      options: groupData,
+      create: false,
+      onChange: eventHandlerGroup('onChange')
+    });
+    const control = $selectGroup[0].selectize;
+    control.setValue(groupData[0].value);
+  }
+
+  {
+    /*toDotMarker(id)*/
+  }
+
+  {/*差异表达基因表及富集分析*/
+    getPeakDegTable("peakdegTable",id);
+    toCelltypeEnrichAtac(id);
+  }
+
+  {/*细胞细胞互作图*/
+    toCiceroTab(id)
+    toDiffTfMotifTab(id)
+  }
+
+  {
+    toGeneExpression2(id,"featurePlotGL1","select-feature");
+  }
+
+  /*为了提高页面初次加载速度，默认不加载标签页第二次数据，当第一次访问第二层标签页时才获取数据。*/
+  {
+    const visitedTabs = {};
+    document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(tab => {
+      tab.addEventListener('show.bs.tab', function(event) {
+        const targetTabId = event.target.getAttribute('href');
+        if (!visitedTabs[targetTabId]) {// 检查是否在当前页面访问过，第一次访问进否则跳过。
+          visitedTabs[targetTabId] = true;// 标记为已访问
+          if (targetTabId=="#tabs-count-cluster"){// 当第一次访问二层标签页时获取数据信息，第二次访问时进不来这里。
+            toCellNumberCluster(id,"cluster");
+          }else if (targetTabId=="#tabs-qc-2"){
+            toQc(id, "nCount_RNA", "qc2");
+          }else if (targetTabId=="#tabs-umap-signac"){
+            toSignacExpression2(id,"signacPlotGL1","select-signac");
+          }else if (targetTabId=="#tabs-umap-tf"){
+            toTfExpression2(id);
+          }else if (targetTabId=="#tabs-deg-cluster"){
+            getDegClusterTable("degClusterTable",id);
+            datatablesShow();
+            toClusterEnrich(id)
+          }
+        }
+      });
+    });
+  }
+
+  {/*质量控制信息*/
+    function showGeneDescription() {
+      getGeneDescription(id);
+    }
+  }
+  {
+    /*<![CDATA[*/
+    var ctx = /*[[${#httpServletRequest.contextPath}]]*/ '';
+    /*]]>*/
+    var url = ctx + "/canvasheat?sample=" + encodeURIComponent(id);
+    // url = "/canvasheat?sample=" + encodeURIComponent(id);
+    $("#getTFHeat").attr("src", url);
+  }
+  {
+    toRnaBoxPlot(id,"toRnaBox","select-feature-rna");
+    getRnaSampleTable(id);
+  }
+  {
+    toRnaBubblePlot(id,"toRnaBubble","select-feature-rna-group");
+    getRnaSampleGroupTable(id);
+  }
+
+</script>
+
+</body>
+</html>

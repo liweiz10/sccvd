@@ -1,0 +1,363 @@
+<!doctype html>
+
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="inc/plugins :: css"><title>scCVD</title></head>
+  <style>
+    #select-console-selectized{position: unset !important;}
+    #select-group-selectized{position: unset !important;}
+  </style>
+  <body >
+
+    <div class="page">
+      <!-- Navbar -->
+      <header th:replace="inc/inc :: header"></header>
+
+      <div class="page-wrapper">
+        <!-- Page body -->
+        <div class="page-body">
+          <div class="container-xl">
+            <div class="card mt-3">
+              <div class="card-body">
+                <table class="table" id="sampleInfo" style="width: 100%;">
+                  <thead>
+                  <tr>
+                    <th>sampleID</th>
+                    <th>gseId</th>
+                    <th>gsmId</th>
+                    <th>sampleName</th>
+                    <th>species</th>
+                    <th>tissue</th>
+                    <th>age</th>
+                    <th>sex</th>
+                    <th>treatment</th>
+                    <th>disease</th>
+                    <th>times</th>
+                    <th>sample</th>
+                    <th>genomic</th>
+                    <th>technology</th>
+                    <th>strain</th>
+                    <th>pmid</th>
+                    <!--<th>article</th>-->
+                    <th>journal</th>
+                    <th>year</th>
+                    <th>strain</th>
+                  </tr>
+                  </thead>
+                  <tbody class="table-tbody">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card mt-3">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+
+                  </div>
+                  <div class="col-md-6">
+                    <di style="width: 100%;">
+                      <img th:src="@{zhikong.png}" alt="Big Boat">
+                    </di>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Content here -->
+            <div class="card mt-3">
+              <div class="card-header">
+
+              </div>
+              <div class="card-body">
+                <div class="tab-content">
+                  <div>Cursus turpis vestibulum, dui in pharetra vulputate id sed non turpis ultricies fringilla at sed facilisis lacus pellentesque purus nibh</div>
+                  <div class="row">
+                    <div class="col-md-6"><!--细胞类型-->
+                      <h3 class="page-title">Improve cards with no border</h3>
+                      <div class="row">
+                        <div class="mb-3 col-md-6">
+                          <label class="form-label">Text</label>
+                          <select id="" class="form-control" placeholder="Input placeholder">
+                            <option value="aaaa" selected>sdfsdf type</option>
+                            <option value="aaa">qwesdasdf</option>
+                          </select>
+                        </div>
+                        <div class="mb-3 col-md-6">
+                          <label class="form-label">Barcode Group</label>
+                          <select id="select-group" placeholder="Input placeholder">
+                          </select>
+                        </div>
+                      </div>
+                      <div id="node" style="width: 100%;height:600px;"></div>
+                    </div>
+                    <div class="col-md-6"><!--基因表达-->
+                      <!-- Cards with tabs component -->
+                      <div class="card-tabs">
+                        <div class="tab-content">
+                          <!-- Content of card #1 -->
+                          <div id="tab-bottom-1" class="card tab-pane active show">
+                            <div class="card-body">
+                              <div class="card-title">Content of tab #1</div>
+                              <h3 class="page-title">Improve cards with no border</h3>
+                              <div class="row">
+                                <div class="mb-3 col-md-6">
+                                  <label class="form-label">Text</label>
+                                  <input type="text" class="form-control" name="example-text-input" placeholder="Input placeholder" />
+                                </div>
+                                <div class="mb-3 col-md-6">
+                                  <label class="form-label">Genes</label>
+                                  <select id="select-console" placeholder="Input placeholder"></select>
+                                </div>
+                              </div>
+                              <div id="geneExpression" style="width: 100%;height:600px;"></div>
+                            </div>
+                          </div>
+                          <!-- Content of card #2 -->
+                          <div id="tab-bottom-2" class="card tab-pane">
+                            <div class="card-body">
+                              <div class="card-title">Content of tab #2</div>
+                              <p class="text-secondary">
+                                Lorem ipsum dolor sit amet, consectetur adipisicing elit. Adipisci, alias aliquid distinctio dolorem expedita, fugiat hic magni molestiae molestias odit.
+                              </p>
+                            </div>
+                          </div>
+                          <!-- Content of card #3 -->
+                          <div id="tab-bottom-3" class="card tab-pane">
+                            <div class="card-body">
+                              <div class="card-title">Content of tab #3</div>
+                              <p class="text-secondary">
+                                Lorem ipsum dolor sit amet, consectetur adipisicing elit. Adipisci, alias aliquid distinctio dolorem expedita, fugiat hic magni molestiae molestias odit.
+                              </p>
+                            </div>
+                          </div>
+                          <!-- Content of card #4 -->
+                          <div id="tab-bottom-4" class="card tab-pane">
+                            <div class="card-body">
+                              <div class="card-title">Content of tab #4</div>
+                              <p class="text-secondary">
+                                Lorem ipsum dolor sit amet, consectetur adipisicing elit. Adipisci, alias aliquid distinctio dolorem expedita, fugiat hic magni molestiae molestias odit.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <!-- Cards navigation -->
+                        <ul class="nav nav-tabs nav-tabs-bottom">
+                          <li class="nav-item"><a href="#tab-bottom-1" class="nav-link active" data-bs-toggle="tab">Tab 1</a></li>
+                          <li class="nav-item"><a href="#tab-bottom-2" class="nav-link" data-bs-toggle="tab">Tab 2</a></li>
+                          <li class="nav-item"><a href="#tab-bottom-3" class="nav-link" data-bs-toggle="tab">Tab 3</a></li>
+                          <li class="nav-item"><a href="#tab-bottom-4" class="nav-link" data-bs-toggle="tab">Tab 4</a></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+
+                </div>
+              </div>
+            </div>
+
+
+            <div class="card mt-3">
+              <div class="card-header">
+                <h3 class="page-title">Improve cards with no border</h3>
+              </div>
+              <div class="card-body">
+                <div id="table-default" class="table-responsive">
+                  <table class="table" id="degTable">
+                    <thead>
+                    <tr>
+                      <th>Gene</th>
+                      <th>Celltype</th>
+                      <th>Pvalue</th>
+                      <th>AvgLog2FC</th>
+                      <th>PvalueAdj</th>
+                      <th>PCT1</th>
+                      <th>PCT2</th>
+                    </tr>
+                    </thead>
+                    <tbody class="table-tbody">
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="card mt-3">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <div id="cellChat" style="width: 100%;height:600px;"></div>
+                  </div>
+                  <div class="col-md-6">
+                    <div id="heatmap" style="width: 100%;height:600px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <!--example 小提琴图和box图-->
+            <div class="card mt-3">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <div id="violin" style="width: 100%;height:600px;"></div>
+                  </div>
+                  <div class="col-md-6">
+                    <div id="boxplot" style="width: 100%;height:600px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <footer th:replace="inc/inc :: footer"></footer>
+      </div>
+    </div>
+    <div th:replace="inc/plugins :: script"></div>
+    <script th:src="@{/js/detail.js}"></script>
+
+
+    <script>
+
+    </script>
+
+
+
+    <script th:inline="javascript">
+      let id = [[${id}]];
+      // id = "stroke_001";
+
+      /*
+      * 定义全局变量
+      * */
+      let x = [];
+      let y = [];
+      let geneName = "";
+      let group = "celltype";
+      {
+        getSampleInfo("sampleInfo",id);
+      }
+
+      {/*基因名用于下拉菜单切换*/
+        const eventHandler = function(name) {
+          return function() {
+            geneName = arguments[0];
+            if (name=="onChange"&&geneName!=""){
+              showGeneExpression("geneExpression", id, geneName)
+            }
+          };
+        };
+        $.ajax({
+          url: "getGeneName",
+          type: "GET",
+          dataType: "json",
+          async: true,
+          data: {id: id},
+          success: function(data) {
+            const $selectGene = $('#select-console').selectize({
+              valueField: 'name',
+              labelField: 'name',
+              searchField: 'name',
+              options: data.data,
+              create: false,
+              onChange: eventHandler('onChange')
+            });
+            const control = $selectGene[0].selectize;
+            control.setValue(data.data[0].name);
+          }
+        });
+      }
+      {/*细胞分组下拉列表*/
+        const eventHandlerGroup = function(name) {
+          return function() {
+            group = arguments[0];
+            showCelltype("node", id, group)
+          };
+        };
+        const groupData = [{name:"celltype"},{name: "clusters"},{name: "origident"}];
+        const $selectGroup = $('#select-group').selectize({
+          valueField: 'name',
+          labelField: 'name',
+          searchField: 'name',
+          options: groupData,
+          create: false,
+          onChange: eventHandlerGroup('onChange')
+        });
+        const control = $selectGroup[0].selectize;
+        control.setValue(groupData[0].name);
+      }
+
+
+
+
+
+      {/*差异表达基因表*/
+        getDegTable("degTable",id);
+      }
+
+      {/*细胞细胞互作图*/
+        const containerId = "cellChat";
+        const chartDom = document.getElementById(containerId);
+        const myChart = echarts.init(chartDom, null, {renderer: 'svg'});
+        myChart.showLoading();
+        $.ajax({
+          url: "getNodeCellInteraction",
+          type: "GET",
+          dataType: "json",
+          async: true,
+          data: {id: id},
+          success: function(data) {
+            cellInteraction(myChart, data)
+          }
+        });
+      }
+
+
+    </script>
+
+    <script th:inline="none">
+      {/*echarts 热图*/
+        const containerId = "heatmap";
+        const chartDom = document.getElementById(containerId);
+        const myChart = echarts.init(chartDom, null, {renderer: 'svg'});
+        myChart.showLoading();
+        const hours = [
+          '12a', '1a', '2a', '3a', '4a', '5a', '6a',
+          '7a', '8a', '9a', '10a', '11a',
+          '12p', '1p', '2p', '3p', '4p', '5p',
+          '6p', '7p', '8p', '9p', '10p', '11p'
+        ];
+        const days = [
+          'Saturday', 'Friday', 'Thursday',
+          'Wednesday', 'Tuesday', 'Monday', 'Sunday'
+        ];
+        const data = [[0, 0, 5], [0, 1, 1], [0, 2, 0], [0, 3, 0], [0, 4, 0], [0, 5, 0], [0, 6, 0], [0, 7, 0], [0, 8, 0], [0, 9, 0], [0, 10, 0], [0, 11, 2], [0, 12, 4], [0, 13, 1], [0, 14, 1], [0, 15, 3], [0, 16, 4], [0, 17, 6], [0, 18, 4], [0, 19, 4], [0, 20, 3], [0, 21, 3], [0, 22, 2], [0, 23, 5], [1, 0, 7], [1, 1, 0], [1, 2, 0], [1, 3, 0], [1, 4, 0], [1, 5, 0], [1, 6, 0], [1, 7, 0], [1, 8, 0], [1, 9, 0], [1, 10, 5], [1, 11, 2], [1, 12, 2], [1, 13, 6], [1, 14, 9], [1, 15, 11], [1, 16, 6], [1, 17, 7], [1, 18, 8], [1, 19, 12], [1, 20, 5], [1, 21, 5], [1, 22, 7], [1, 23, 2], [2, 0, 1], [2, 1, 1], [2, 2, 0], [2, 3, 0], [2, 4, 0], [2, 5, 0], [2, 6, 0], [2, 7, 0], [2, 8, 0], [2, 9, 0], [2, 10, 3], [2, 11, 2], [2, 12, 1], [2, 13, 9], [2, 14, 8], [2, 15, 10], [2, 16, 6], [2, 17, 5], [2, 18, 5], [2, 19, 5], [2, 20, 7], [2, 21, 4], [2, 22, 2], [2, 23, 4], [3, 0, 7], [3, 1, 3], [3, 2, 0], [3, 3, 0], [3, 4, 0], [3, 5, 0], [3, 6, 0], [3, 7, 0], [3, 8, 1], [3, 9, 0], [3, 10, 5], [3, 11, 4], [3, 12, 7], [3, 13, 14], [3, 14, 13], [3, 15, 12], [3, 16, 9], [3, 17, 5], [3, 18, 5], [3, 19, 10], [3, 20, 6], [3, 21, 4], [3, 22, 4], [3, 23, 1], [4, 0, 1], [4, 1, 3], [4, 2, 0], [4, 3, 0], [4, 4, 0], [4, 5, 1], [4, 6, 0], [4, 7, 0], [4, 8, 0], [4, 9, 2], [4, 10, 4], [4, 11, 4], [4, 12, 2], [4, 13, 4], [4, 14, 4], [4, 15, 14], [4, 16, 12], [4, 17, 1], [4, 18, 8], [4, 19, 5], [4, 20, 3], [4, 21, 7], [4, 22, 3], [4, 23, 0], [5, 0, 2], [5, 1, 1], [5, 2, 0], [5, 3, 3], [5, 4, 0], [5, 5, 0], [5, 6, 0], [5, 7, 0], [5, 8, 2], [5, 9, 0], [5, 10, 4], [5, 11, 1], [5, 12, 5], [5, 13, 10], [5, 14, 5], [5, 15, 7], [5, 16, 11], [5, 17, 6], [5, 18, 0], [5, 19, 5], [5, 20, 3], [5, 21, 4], [5, 22, 2], [5, 23, 0], [6, 0, 1], [6, 1, 0], [6, 2, 0], [6, 3, 0], [6, 4, 0], [6, 5, 0], [6, 6, 0], [6, 7, 0], [6, 8, 0], [6, 9, 0], [6, 10, 1], [6, 11, 0], [6, 12, 2], [6, 13, 1], [6, 14, 3], [6, 15, 4], [6, 16, 0], [6, 17, 0], [6, 18, 0], [6, 19, 0], [6, 20, 1], [6, 21, 2], [6, 22, 2], [6, 23, 6]]
+                .map(function (item) {
+                  return [item[1], item[0], item[2] || '-'];
+                });
+        const mydata = {data:data,days:days,hours:hours}
+        heatmap(myChart,mydata)
+      }
+
+      {/*violin图示例*/
+        const containerId = "boxplot";
+        const chartDom = document.getElementById(containerId);
+        const myChart = echarts.init(chartDom, null, {renderer: 'svg'});
+        myChart.showLoading();
+        const mydata = [
+          [850, 740, 900, 1070, 930, 850, 950, 980, 980, 880, 1000, 980, 930, 650, 760, 810, 1000, 1000, 960, 960],
+          [960, 940, 960, 940, 880, 800, 850, 880, 900, 840, 830, 790, 810, 880, 880, 830, 800, 790, 760, 800],
+          [880, 880, 880, 860, 720, 720, 620, 860, 970, 950, 880, 910, 850, 870, 840, 840, 850, 840, 840, 840],
+          [890, 810, 810, 820, 800, 770, 760, 740, 750, 760, 910, 920, 890, 860, 880, 720, 840, 850, 850, 780],
+          [890, 840, 780, 810, 760, 810, 790, 810, 820, 850, 870, 870, 810, 740, 810, 940, 950, 800, 810, 870]
+        ];
+        boxplot(myChart,mydata)
+      }
+    </script>
+
+  </body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head th:fragment="css">
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>scCVD</title>
+    <!-- CSS files -->
+    <link th:href="@{/css/tabler.css}" rel="stylesheet"/>
+    <link th:href="@{/css/tabler-flags.css}" rel="stylesheet"/>
+    <link th:href="@{/css/tabler-payments.css}" rel="stylesheet"/>
+    <link th:href="@{/css/tabler-social.css}" rel="stylesheet"/>
+    <link th:href="@{/css/tabler-vendors.css}" rel="stylesheet"/>
+    <link th:href="@{/css/dataTables.dataTables-2.1.2.css}" rel="stylesheet"/>
+    <link th:href="@{/css/selectize.bootstrap5.min.css}" rel="stylesheet"/>
+    <style>
+        .selectize-input>input{padding: 0.3em !important;}
+        /*datatable 分页颜色*/
+        div.dt-container select.dt-input{padding: 3px;margin-right: 3px;}
+        div.dt-container .dt-search input{padding: 3px;}
+        div.dt-container .dt-paging .dt-paging-button:hover{
+            color: white !important;
+            border: 1px solid #066fd1;
+            background: linear-gradient(to bottom, #066fd1 0%, #066fd1 100%);
+        }
+        div.dt-container .dt-paging .dt-paging-button{padding: 0.2em 0.7em;}
+        /*nav hover*/
+        .dropdown-item:focus, .dropdown-item:hover {
+            color: var(--tblr-dropdown-link-hover-color);
+            text-decoration: none;
+            background-color: rgba(108, 122, 145, 0.08);
+        }
+    </style>
+</head>
+<body>
+<div th:fragment="script">
+
+    <script th:src="@{/js/tabler.js}" defer></script>
+    <script th:src="@{/js/jquery-3.7.1.min.js}"></script>
+    <script th:src="@{/js/dataTables-2.1.2.js}"></script>
+    <script th:src="@{/js/echarts-5.5.0.min.js}"></script>
+    <script th:src="@{/js/vue.global-3.4.34.js}"></script>
+    <script th:src="@{/js/selectize.min.js}"></script>
+    <!--    <script th:src="@{/js/plotly-2.34.0.min.js}"></script>-->
+    <!--<script th:src="@{/js/dist.min.js}"></script>-->
+</div>
+</body>
+</html>
